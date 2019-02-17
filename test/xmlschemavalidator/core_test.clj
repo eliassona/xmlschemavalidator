@@ -1,92 +1,47 @@
 (ns xmlschemavalidator.core-test
   (:require [clojure.test :refer :all]
+            [clojure.data.xml :refer [parse-str parse]]
+            [xmlschemavalidator.lazymap :refer [lazy-map]]
             [xmlschemavalidator.core :refer :all]))
 
 
 
-(defn assert-decode [expected-meta expected-data actual-data]
-  (is (= expected-data actual-data))
-  (is (= expected-meta (meta actual-data))))
+(def schema "<schema>
+    <simpleType name=\"stringenum\">
+      <restriction base=\"string\">
+        <enumeration value=\"small\"/>
+        <enumeration value=\"medium\"/>
+        <enumeration value=\"large\"/>
+      </restriction>
+    </simpleType>
+		<simpleType name =\"intrange\">
+		      <restriction base=\"integer\">
+		        <minInclusive value=\"36\"/>
+		        <maxInclusive value=\"42\"/>
+		      </restriction>
+		    </simpleType>
+		    <simpleType name =\"theunion\">
+		    <union memberTypes=\"stringenum intrange\"/>
+		    </simpleType>
+		<element name=\"udr\">
+		    <complexType>
+		      <sequence>
+		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
+		      </sequence>
+		    </complexType>
+		  </element>
+</schema>")
 
-(deftest test-valid-primitive-type
-  (let [schema
-    "<schema>    
-			<element name=\"lastname\" type=\"string\"/>
-     </schema>"]
-    (assert-decode {:lastname :ok} 
-                   {:lastname "Refsnes"} ((parse-schema schema) 
-                                            "<lastname>Refsnes</lastname>"))
-    ))
+(def value 
+  "<udr>
+     <uniontest>36</uniontest>
+     <uniontest>40</uniontest>
+   </udr>")
 
-(deftest test-default-attr
-  #_(let [schema "<schema><element name=\"color\" type=\"string\" default=\"red\"/></schema>"]
-     (assert-decode {:color :ok} {:color "black"} ((parse-schema schema) "<color>black</color>"))
-     (assert-decode {:color :ok} {:color "red"} ((parse-schema schema) ""))
-     )
+(def schema-res
+    (fn [data] {:udr {:uniontest (fn [data])}}))
+
+
+(deftest test-schema
+  (is (= {:udr {:uniontest [36 40]}} ((schema-of schema) value)))
   )
-(deftest test-fixed-attr
-  #_(let [schema "<schema><element name=\"color\" type=\"string\" fixed=\"red\"/></schema>"]
-    (assert-decode {:color "color must be red"} {:color "black"} ((parse-schema schema) "<color>black</color>"))
-    (assert-decode {:color :ok} {:color "red"} ((parse-schema schema) "<color>red</color>"))
-    )
-  )
-
-
-(deftest test-valid-simple-schema
-  #_(let [schema "<schema>
-							    <element name=\"size\">
-								    <simpleType>
-								      <restriction base=\"integer\">
-								        <enumeration value=\"small\"/>
-								        <enumeration value=\"medium\"/>
-								        <enumeration value=\"large\"/>
-								      </restriction>
-								    </simpleType>
-							    </element>
-							  </schema>"]
-    (assert-decode {:size :ok} {:size "small"} ((parse-schema schema) "<size>small</size>"))
-    (assert-decode {:size :ok} {:size "medium"} ((parse-schema schema) "<size>medium</size>"))
-    (assert-decode {:size :ok} {:size "large"} ((parse-schema schema) "<size>large</size>"))))
-
-
-(deftest test-invalid-data-simple-schema
-  #_(let [schema "<schema>
-							    <element name=\"size\">
-								    <simpleType>
-								      <restriction base=\"integer\">
-								        <enumeration value=\"small\"/>
-								        <enumeration value=\"medium\"/>
-								        <enumeration value=\"large\"/>
-								      </restriction>
-								    </simpleType>
-							    </element>
-							  </schema>"]
-    (assert-decode {:size "invalid is not part of enumeration"} {:size "invalid"} ((parse-schema schema) "<size>invalid</size>"))
-    (assert-decode {:size "invalidsize doesn't exist in schema"} {:size "invalid"} ((parse-schema schema) "<invalidsize>small</invalidsize>"))
-    ))
-
-
-(deftest test-valid-simple-complexType
-  #_(let [schema 
-    "<xs:complexType name=\"lettertype\" mixed=\"true\">
-      <xs:sequence>
-        <xs:element name=\"name\" type=\"xs:string\"/>
-        <xs:element name=\"orderid\" type=\"xs:positiveInteger\"/>
-        <xs:element name=\"shipdate\" type=\"xs:date\"/>
-      </xs:sequence>
-    </xs:complexType>"]))
-
-
-(deftest test-valid-complexType-schema-with-sequence 
-  #_(let [schema 
-     "<element name=\"person\">
-       <complexType>
-         <sequence>
-            <element name=\"full_name\" type=\"string\"/>
-            <element name=\"child_name\" type=\"string\" maxOccurs=\"10\"/>
-         </sequence>
-      </complexType>
-     </element>"]
-    
-  ))
-

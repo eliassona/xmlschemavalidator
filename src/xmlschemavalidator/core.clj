@@ -1,82 +1,82 @@
 (ns xmlschemavalidator.core
   (:use [clojure.pprint])
-  (:require [clojure.data.xml :refer [parse-str parse]])
+  (:require [clojure.data.xml :refer [parse-str parse]]
+            [clojure.spec.alpha :as s])
   (:import [java.io ByteArrayInputStream InputStream])
   )
 
+(require '[clojure.spec.alpha :as s])
 
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
      x#))
-(defprotocol ISchemaParser
-  (parse-schema [schema]))
 
-(defn type-of [type]
-  (when (= (:tag type) :element)
-    [(-> type :attrs :name keyword) type]))
 
-(defn types-of [env]
-  (into {} (map type-of env)))
- 
+(defn error [msg]
+  (throw (IllegalArgumentException. msg)))
 
-(defn validate-schema [data node env]
-  (dbg node)
-    (if-let [type (dbg (-> node keys))]
-      (dbg type)
-      )
+
+(declare transform)
+
+(defn parse-element [the-map element]
+  (if-let [f (the-map (:tag element))]
+    (f (:attrs element) (transform the-map (:content element)))
+    (assoc element :content (transform the-map (:content element)))))  
+
+(defn transform [the-map schema] 
+  (cond
+    (map? schema) (parse-element the-map schema)
+    (string? schema) schema
+    :else
+    (map (partial transform the-map) schema)))
+
+(defn parse-simple-type [attrs content]
+  (condp = (.keySet attrs)
+    #{:name} `(let [~'_ (reset! ~'type-map ~(:name attrs) (fn [~'value] ~@content))
+                    ~'parent-type-map ~'type-map
+                    ~'type-map (atom {})])
+    #{:name :type} content
+    #{} content
+    ))
+    
+
+
+(defn parse-str-attr [op attrs _]
+  `(~op ~'value ~(-> attrs :value)))
+(defn parse-int-attr [op attrs content] (parse-str-attr op attrs content))
+
+(def restriction-map 
+  {:minInclusive (partial parse-int-attr '<=),
+   :maxInclusive (partial parse-int-attr '>=)
+   :enumeration (partial parse-str-attr '=)})
+
+(defn enumeration? [content]
+  (every? #(= (:tag %) :enumeration) content))
+
+(defn parse-restriction [attrs content]
+  (condp = (:base attrs)
+    "integer"
+    (if (enumeration? content)
+      `(or ~@(transform restriction-map content))
+      `(and ~@(transform restriction-map content)))
+    "string"
+    `(or ~@(transform restriction-map content))
+     )
   )
 
-(defprotocol IValidate 
-  (validate [data node env]))
+(defn parse-union 
+  ([attrs content]
   
-  
-(extend-protocol IValidate
-  java.util.Map
-  (validate [data node env]
-    (validate (:content data) node env))
-  clojure.lang.LazySeq
-  (validate [data node env]
-    (validate (first data) node env))
-  String
-  (validate [data node env]
-    (validate-schema (.trim data) node env))
   )
+  ([fns]
+    ))
 
-  (extend-protocol ISchemaParser
-    String
-    (parse-schema [schema] (parse-schema (ByteArrayInputStream. (.getBytes schema))))
-    InputStream
-    (parse-schema [schema] 
-      (let [schema (parse schema)
-            env (if (= (:tag schema) :schema) (:content schema) (throw (IllegalArgumentException. "Invalid schema")))]
-        (fn [data]
-          (let [data (parse-str data)]
-            (validate data env env))))))
-      
+(def parse-map 
+  {:simpleType parse-simple-type
+   :restriction parse-restriction
+   :union parse-union,
+   :schema (fn [attrs content] `(defn decode [~'value] (let [~'type-map (atom {})] ~content)))})
 
 
 
-
-  (def schema 
-    "<schema>
-    <element name=\"sizebystring\">
-	    <simpleType>
-	      <restriction base=\"integer\">
-	        <enumeration value=\"small\"/>
-	        <enumeration value=\"medium\"/>
-	        <enumeration value=\"large\"/>
-	      </restriction>
-	    </simpleType>
-    </element>
-  </schema>")
-
-  (def data 
-    "<sizebystring>
-     small
-   </sizebystring>")
-
-  (comment
-    ((parse-schema schema) data)
-    )
-  
