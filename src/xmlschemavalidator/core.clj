@@ -50,8 +50,8 @@
   `(~op ~'value ~(-> attrs :value read-string)))
 
 (def restriction-map 
-  {:minInclusive (partial parse-int-attr '<=),
-   :maxInclusive (partial parse-int-attr '>=)
+  {:minInclusive (partial parse-int-attr '>=),
+   :maxInclusive (partial parse-int-attr '<=)
    :enumeration (partial parse-str-attr '=)})
 
 (defn enumeration? [content]
@@ -69,13 +69,13 @@
   )
 
 (defn add-type-map [member]
-  `((~'type-map ~member) ~'value)
+  `(((deref ~'type-map) ~member) ~'value)
   )
 
 (defn add-try-catch [unions]
   (if (empty? (rest unions))
     `~(first unions)
-    `(try ~(first unions) (catch Exception e ~@(rest unions)))))
+    `(try ~(first unions) (catch Exception e# ~@(rest unions)))))
   
 
 (defn parse-union 
@@ -85,8 +85,15 @@
 (defn validate-schema [value elements type-map]
   )
 
+(defn add-swap! [[n v]]
+  `(swap! ~'type-map assoc ~n ~v))
+
 (defn parse-schema [attrs content] 
-  `(defn ~'decode [~'value] (let [~'type-map ~(apply hash-map (reduce concat (filter vector? content)))])))
+  `(defn ~'decode [~'value] 
+     (let [~'type-map (atom {})]
+       ~@(map add-swap! (partition 2 (reduce concat (filter vector? content))))
+       (deref ~'type-map)
+       )))
 
 (def parse-map 
   {:simpleType parse-simple-type
@@ -94,5 +101,39 @@
    :union parse-union,
    :schema parse-schema})
 
+(def schema "<schema>
+    <simpleType name=\"stringenum\">
+      <restriction base=\"string\">
+        <enumeration value=\"small\"/>
+        <enumeration value=\"medium\"/>
+        <enumeration value=\"large\"/>
+      </restriction>
+    </simpleType>
+		<simpleType name =\"intrange\">
+		      <restriction base=\"integer\">
+		        <minInclusive value=\"36\"/>
+		        <maxInclusive value=\"42\"/>
+		      </restriction>
+		    </simpleType>
+		    <simpleType name =\"theunion\">
+		    <union memberTypes=\"stringenum intrange\"/>
+		    </simpleType>
+		<element name=\"udr\">
+		    <complexType>
+		      <sequence>
+		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
+		      </sequence>
+		    </complexType>
+		  </element>
+</schema>")
 
+(def value 
+  "<udr>
+     <uniontest>36</uniontest>
+     <uniontest>40</uniontest>
+   </udr>")
 
+(comment 
+  (pprint (transform parse-map (parse-str schema)))
+  ((((eval (transform parse-map (parse-str schema))) nil) "intrange") 37)
+  )
