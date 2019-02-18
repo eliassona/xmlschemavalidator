@@ -77,13 +77,18 @@
     `~(first unions)
     `(try ~(first unions) (catch Exception e# ~@(rest unions)))))
   
+(defn parse-element [attrs content]
+ `(with-meta ~content attrs))
 
 (defn parse-union 
   [attrs content]
     `~(add-try-catch (map add-type-map (.split (:memberTypes attrs) " "))))
 
-(defn validate-schema [value elements type-map]
-  )
+
+(defn elem->name [e] (-> e :attrs :name keyword))
+
+(defn validate-element [value elements type-map]
+  (-> (filter #(= (:tag value) (elem->name %)) elements) first value))
 
 (defn add-swap! [[n v]]
   `(swap! ~'type-map assoc ~n ~v))
@@ -92,13 +97,17 @@
   `(defn ~'decode [~'value] 
      (let [~'type-map (atom {})]
        ~@(map add-swap! (partition 2 (reduce concat (filter vector? content))))
-       (deref ~'type-map)
+       (validate-element ~'value ~(vec (filter map? content)) (deref ~'type-map))
        )))
+
+(defn parse-sequence [attrs content]
+  `(fn [~'value] ~(map elem->name content)))
 
 (def parse-map 
   {:simpleType parse-simple-type
    :restriction parse-restriction
    :union parse-union,
+   :sequence parse-sequence
    :schema parse-schema})
 
 (def schema "<schema>
