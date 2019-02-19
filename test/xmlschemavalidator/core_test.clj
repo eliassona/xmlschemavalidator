@@ -42,6 +42,36 @@
     (fn [data] {:udr {:uniontest (fn [data])}}))
 
 
-(deftest test-schema
-  (is (= {:udr {:uniontest [36 40]}} ((schema-of schema) value)))
-  )
+(deftest test-enum-restriction
+  (let [f (validation-fn-of "<restriction base=\"string\">
+		        <enumeration value=\"small\"/>
+		        <enumeration value=\"medium\"/>
+		        <enumeration value=\"large\"/>
+		      </restriction>")]
+	  (is (= true (f "small" nil)))
+	  (is (= true (f "medium" nil)))
+	  (is (= true (f "large" nil)))
+	  (is (= false (f "asdf" nil)))
+  ))
+
+(deftest test-range-restriction
+  (let [f (validation-fn-of "<restriction base=\"integer\">
+		        <minInclusive value=\"36\"/>
+		        <maxInclusive value=\"42\"/>
+		      </restriction>")]
+	  (is (= true (f 36 nil)))
+	  (is (= true (f 42 nil)))
+	  (is (= false (f 43 nil)))
+  ))
+
+
+(deftest test-anon-simple-type
+  (let [f (validation-fn-of 
+            "<simpleType>
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>")]
+    (is (= true (f 36 nil)))
+    (is (= false (f 43 nil)))))

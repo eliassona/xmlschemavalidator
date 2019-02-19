@@ -13,6 +13,11 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
+(defn fn-of [expr]
+  `(fn [~'value ~'env] ~expr))
+
+(defn apply-of [expr]
+  `(~expr ~'value ~'env))
 
 (defn error [msg]
   (throw (IllegalArgumentException. msg)))
@@ -39,7 +44,7 @@
   (condp = (.keySet attrs)
     #{:name} `[~(:name attrs) (fn [~'value] ~@content)]
     #{:name :type} `[~(:name attrs)  (fn [~'value] ((~'type-map ~(:type attrs)) ~@content))]
-    #{} `(fn [~'value] ~@content)
+    #{} (fn-of (apply-of (first content)))
     ))
     
 
@@ -58,15 +63,15 @@
   (every? #(= (:tag %) :enumeration) content))
 
 (defn parse-restriction [attrs content]
-  (condp = (:base attrs)
-    "integer"
-    (if (enumeration? content)
-      `(or ~@(transform restriction-map content))
-      `(and ~@(transform restriction-map content)))
-    "string"
-    `(or ~@(transform restriction-map content))
-     )
-  )
+    (fn-of 
+      (condp = (:base attrs)
+        "integer"
+        (if (enumeration? content)
+          `(or ~@(transform restriction-map content))
+          `(and ~@(transform restriction-map content)))
+        "string"
+        `(or ~@(transform restriction-map content))
+         )))
 
 (defn add-type-map [member]
   `(((deref ~'type-map) ~member) ~'value)
@@ -77,8 +82,12 @@
     `~(first unions)
     `(try ~(first unions) (catch Exception e# ~@(rest unions)))))
   
+(defn element-of [attrs content]
+  `(when-let [type# ~(:type attrs)]
+     ((deref ~'type-map) type#)))
+
 (defn parse-element [attrs content]
- `(with-meta ~content attrs))
+ (with-meta `(fn [~'value] ~(element-of attrs content)) attrs))
 
 (defn parse-union 
   [attrs content]
@@ -93,54 +102,39 @@
 (defn add-swap! [[n v]]
   `(swap! ~'type-map assoc ~n ~v))
 
+(defn element? [v] (if (nil? (meta v)) false true))
+
 (defn parse-schema [attrs content] 
   `(defn ~'decode [~'value] 
      (let [~'type-map (atom {})]
        ~@(map add-swap! (partition 2 (reduce concat (filter vector? content))))
-       (validate-element ~'value ~(vec (filter map? content)) (deref ~'type-map))
+       (validate-element ~'value ~(filter element? content) (deref ~'type-map))
        )))
 
 (defn parse-sequence [attrs content]
-  `(fn [~'value] ~(map elem->name content)))
+  `(fn [~'value] ~(map elem->name (dbg content))))
 
 (def parse-map 
   {:simpleType parse-simple-type
    :restriction parse-restriction
    :union parse-union,
    :sequence parse-sequence
-   :schema parse-schema})
+   :schema parse-schema
+   :element parse-element
+   :complexType parse-element})
 
-(def schema "<schema>
-    <simpleType name=\"stringenum\">
-      <restriction base=\"string\">
-        <enumeration value=\"small\"/>
-        <enumeration value=\"medium\"/>
-        <enumeration value=\"large\"/>
-      </restriction>
-    </simpleType>
-		<simpleType name =\"intrange\">
-		      <restriction base=\"integer\">
-		        <minInclusive value=\"36\"/>
-		        <maxInclusive value=\"42\"/>
-		      </restriction>
-		    </simpleType>
-		    <simpleType name =\"theunion\">
-		    <union memberTypes=\"stringenum intrange\"/>
-		    </simpleType>
-		<element name=\"udr\">
-		    <complexType>
-		      <sequence>
-		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
-		      </sequence>
-		    </complexType>
-		  </element>
-</schema>")
+(defn validation-expr-of [element]
+  (transform parse-map (parse-str element)))
 
-(def value 
-  "<udr>
-     <uniontest>36</uniontest>
-     <uniontest>40</uniontest>
-   </udr>")
+(defn validation-fn-of [element]
+  (eval (validation-expr-of element)))
+
+(defmacro def-schema [schema]
+  (transform parse-map (parse-str schema)))
+
+
+
+
 
 (comment 
   (pprint (transform parse-map (parse-str schema)))
