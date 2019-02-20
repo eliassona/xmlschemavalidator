@@ -88,8 +88,8 @@
 		          </restriction>
              </simpleType>")]
     (is (= :type (-> e meta :kind)))
-    (is (= false ((eval (second e)) 0 predef-env)))
-    (is (= true ((eval (second e)) 36 predef-env)))
+    (is (= false ((eval (first (vals e))) 0 predef-env)))
+    (is (= true ((eval (first (vals e))) 36 predef-env)))
     ))
 
 (deftest test-simple-type-reffing-predef
@@ -97,9 +97,9 @@
             "<simpleType name=\"aname\" type=\"byte\">
              </simpleType>")]
     (is (= :type (-> e meta :kind)))
-    (is (= true ((eval (second e)) 0 predef-env)))
-    (is (= true ((eval (second e)) 127 predef-env)))
-    (is (= false ((eval (second e)) 128 predef-env)))
+    (is (= true ((eval (first (vals e))) 0 predef-env)))
+    (is (= true ((eval (first (vals e))) 127 predef-env)))
+    (is (= false ((eval (first (vals e))) 128 predef-env)))
     
     ))
 
@@ -126,10 +126,19 @@
 (deftest test-schema-with-simple-type
   (let [f (validation-fn-of 
             "<schema>
+              <simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>  
               <element name=\"abyte\" type=\"byte\"/>
               <element name=\"anint\" type=\"integer\"/>
+              <element name=\"my\" type=\"mytype\"/>
              </schema>")]
     (is (= true (f (parse-str "<anint>0</anint>") predef-env)))
     (is (= true (f (parse-str "<abyte>0</abyte>") predef-env)))
     (is (= false (f (parse-str "<abyte>128</abyte>") predef-env)))
+    (is (= true (f (parse-str "<my>36</my>") predef-env)))
+    (is (= false (f (parse-str "<my>35</my>") predef-env)))
   ))

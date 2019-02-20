@@ -39,8 +39,8 @@
 
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
-    #{:name} (with-meta [(:name attrs) (fn-of (apply-of (first content)))] {:kind :type})
-    #{:name :type} (with-meta [(:name attrs) (fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))] {:kind :type})
+    #{:name} (with-meta {(:name attrs) (fn-of (apply-of (first content)))} {:kind :type})
+    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))} {:kind :type})
     #{} (-> content first apply-of fn-of)))
     
 (defn parse-str-attr [op attrs _]
@@ -93,6 +93,8 @@
 
 (defn element? [v] (= (-> v meta :kind) :element))
 
+(defn type? [v] (= (-> v meta :kind) :type))
+
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
 
@@ -102,10 +104,12 @@
     value))
 
 (defn parse-schema [attrs content]
-  (let [elements (filter element? content)]
+  (let [types (filter type? content)
+        elements (filter element? content)]
     (fn-of 
-      `(let [~'env (merge ~(apply merge elements) ~'env)]
-         ((~'env (:tag ~'value)) (content-of (:content ~'value)) ~'env)))))
+      `(let [~'env (merge ~(apply merge types) ~'env)
+             elems# ~(apply merge elements)]
+         ((elems# (:tag ~'value)) (content-of (:content ~'value)) ~'env)))))
 
 (defn parse-sequence [attrs content]
   `(fn [~'value] ~(map elem->name (dbg content))))
