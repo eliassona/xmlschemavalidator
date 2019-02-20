@@ -99,11 +99,11 @@
   ))
 
 (deftest test-schema
-  #_(let [v (parse-str "<anint>0</anint>")
-         f (validation-fn-of 
-             "<schema>
+  (let [v (parse-str "<anint>0</anint>")
+        f (validation-fn-of 
+            "<schema>
               <element name=\"abyte\" type=\"byte\"/>
               <element name=\"anint\" type=\"integer\"/>
              </schema>")]
-     (is (= true (f v predef-env)))
+    (is (= true (f v predef-env)))
   ))

@@ -107,7 +107,10 @@
 
 (defn parse-schema [attrs content]
   (let [elements (filter element? content)]
-    (fn-of `((~(apply merge elements) (:tag ~'value)) (:content ~'value) ~'env))))
+    (fn-of 
+      `(let [~'env (merge ~(apply merge elements) ~'env)]
+         ((~'env (:tag ~'value)) (:content ~'value) ~'env)))
+    #_(fn-of `((~(apply merge elements) (:tag ~'value)) (:content ~'value) ~'env))))
 
 (defn parse-sequence [attrs content]
   `(fn [~'value] ~(map elem->name (dbg content))))
@@ -129,6 +132,7 @@
    "float" allowed
    "double" allowed
    "decimal" allowed
+   "integer" (fn [value _] number?)
    "positiveInteger" (fn [value _] (> value 0))
    "negativeInteger" (fn [value _] (< value 0))
    "nonPositiveInteger" (fn [value _] (<= value 0))
