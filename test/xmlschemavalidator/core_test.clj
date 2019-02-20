@@ -1,4 +1,5 @@
 (ns xmlschemavalidator.core-test
+  (:use clojure.pprint)
   (:require [clojure.test :refer :all]
             [clojure.data.xml :refer [parse-str parse]]
             [xmlschemavalidator.lazymap :refer [lazy-map]]
@@ -73,5 +74,36 @@
 		            <maxInclusive value=\"42\"/>
 		          </restriction>
              </simpleType>")]
-    (is (= true (f 36 nil)))
-    (is (= false (f 43 nil)))))
+    
+    (is (= true (f [36] nil)))
+    (is (= false (f [43] nil)))))
+
+(deftest test-type-simple-type
+  (let [e (validation-expr-of 
+            "<simpleType name=\"aname\" type=\"byte\">
+             </simpleType>")]
+    (is (= :type (-> e meta :kind)))
+    (is (= true ((eval (second e)) [0] predef-env)))
+    (is (= true ((eval (second e)) [127] predef-env)))
+    (is (= false ((eval (second e)) [128] predef-env)))
+    
+    ))
+
+(deftest test-element
+  (let [text "<element name=\"abyte\" type=\"byte\"/>"
+        f (validation-fn-of text)]
+    (is (= :element (-> (validation-expr-of text) meta :kind)))
+    (is (= true ((f :abyte) 0 predef-env)))
+    (is (= true ((f :abyte) 127 predef-env)))
+    (is (= false ((f :abyte) 128 predef-env)))
+  ))
+
+(deftest test-schema
+  #_(let [v (parse-str "<anint>0</anint>")
+         f (validation-fn-of 
+             "<schema>
+              <element name=\"abyte\" type=\"byte\"/>
+              <element name=\"anint\" type=\"integer\"/>
+             </schema>")]
+     (is (= true (f v predef-env)))
+  ))
