@@ -75,17 +75,17 @@
 		          </restriction>
              </simpleType>")]
     
-    (is (= true (f [36] nil)))
-    (is (= false (f [43] nil)))))
+    (is (= true (f 36 nil)))
+    (is (= false (f 43 nil)))))
 
 (deftest test-type-simple-type
   (let [e (validation-expr-of 
             "<simpleType name=\"aname\" type=\"byte\">
              </simpleType>")]
     (is (= :type (-> e meta :kind)))
-    (is (= true ((eval (second e)) [0] predef-env)))
-    (is (= true ((eval (second e)) [127] predef-env)))
-    (is (= false ((eval (second e)) [128] predef-env)))
+    (is (= true ((eval (second e)) 0 predef-env)))
+    (is (= true ((eval (second e)) 127 predef-env)))
+    (is (= false ((eval (second e)) 128 predef-env)))
     
     ))
 
@@ -99,11 +99,11 @@
   ))
 
 (deftest test-schema
-  (let [v (parse-str "<anint>0</anint>")
-        f (validation-fn-of 
+  (let [f (validation-fn-of 
             "<schema>
               <element name=\"abyte\" type=\"byte\"/>
               <element name=\"anint\" type=\"integer\"/>
              </schema>")]
-    (is (= true (f v predef-env)))
+    (is (= true (f (parse-str "<anint>0</anint>") predef-env)))
+    (is (= true (f (parse-str "<abyte>0</abyte>") predef-env)))
   ))

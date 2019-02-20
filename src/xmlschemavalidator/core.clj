@@ -6,8 +6,6 @@
   (:import [java.io ByteArrayInputStream InputStream])
   )
 
-(require '[clojure.spec.alpha :as s])
-
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
@@ -24,10 +22,8 @@
 (defn error [msg]
   (throw (IllegalArgumentException. msg)))
 
-
 (declare transform)
 (declare parse-node)
-  
 
 (defn transform [the-map schema] 
   (cond
@@ -35,7 +31,6 @@
     (string? schema) schema
     :else
     (map (partial transform the-map) schema)))
-
 
 (defn parse-node [the-map element]
   (if-let [f (the-map (:tag element))]
@@ -45,12 +40,9 @@
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
     #{:name} `[~(:name attrs) (fn-of ~@content)]
-    #{:name :type} (with-meta [(:name attrs) (first-fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))] {:kind :type})
-    #{} (first-fn-of (apply-of (first content)))
-    ))
+    #{:name :type} (with-meta [(:name attrs) (fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))] {:kind :type})
+    #{} (-> content first apply-of fn-of)))
     
-
-
 (defn parse-str-attr [op attrs _]
   `(~op ~'value ~(-> attrs :value)))
 (defn parse-int-attr [op attrs _]
@@ -97,20 +89,21 @@
 
 (defn elem->name [e] (-> e :attrs :name keyword))
 
-(defn validate-element [value elements type-map]
-  (-> (filter #(= (:tag value) (elem->name %)) elements) first value))
-
-(defn add-swap! [[n v]]
-  `(swap! ~'type-map assoc ~n ~v))
-
 (defn element? [v] (= (-> v meta :kind) :element))
+
+(defn simple-type? [value]
+  (and (= (count value) 1) (not (map? (first value)))))
+
+(defn content-of [value]
+  (if (simple-type? value)
+    (-> value first read-string)
+    value))
 
 (defn parse-schema [attrs content]
   (let [elements (filter element? content)]
     (fn-of 
       `(let [~'env (merge ~(apply merge elements) ~'env)]
-         ((~'env (:tag ~'value)) (:content ~'value) ~'env)))
-    #_(fn-of `((~(apply merge elements) (:tag ~'value)) (:content ~'value) ~'env))))
+         ((~'env (:tag ~'value)) (content-of (:content ~'value)) ~'env)))))
 
 (defn parse-sequence [attrs content]
   `(fn [~'value] ~(map elem->name (dbg content))))
@@ -132,7 +125,7 @@
    "float" allowed
    "double" allowed
    "decimal" allowed
-   "integer" (fn [value _] number?)
+   "integer" allowed
    "positiveInteger" (fn [value _] (> value 0))
    "negativeInteger" (fn [value _] (< value 0))
    "nonPositiveInteger" (fn [value _] (<= value 0))
@@ -157,11 +150,3 @@
 (defmacro def-schema [schema]
   (transform parse-map (parse-str schema)))
 
-
-
-
-
-(comment 
-  (pprint (transform parse-map (parse-str schema)))
-  ((((eval (transform parse-map (parse-str schema))) nil) "intrange") 37)
-  )
