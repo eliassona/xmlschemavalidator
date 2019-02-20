@@ -49,10 +49,10 @@
 		        <enumeration value=\"medium\"/>
 		        <enumeration value=\"large\"/>
 		      </restriction>")]
-	  (is (= true (f "small" nil)))
-	  (is (= true (f "medium" nil)))
-	  (is (= true (f "large" nil)))
-	  (is (= false (f "asdf" nil)))
+	  (is (= true (f "small" predef-env)))
+	  (is (= true (f "medium" predef-env)))
+	  (is (= true (f "large" predef-env)))
+	  (is (= false (f "asdf" predef-env)))
   ))
 
 (deftest test-range-restriction
@@ -60,9 +60,9 @@
 		        <minInclusive value=\"36\"/>
 		        <maxInclusive value=\"42\"/>
 		      </restriction>")]
-	  (is (= true (f 36 nil)))
-	  (is (= true (f 42 nil)))
-	  (is (= false (f 43 nil)))
+	  (is (= true (f 36 predef-env)))
+	  (is (= true (f 42 predef-env)))
+	  (is (= false (f 43 predef-env)))
   ))
 
 
@@ -75,10 +75,22 @@
 		          </restriction>
              </simpleType>")]
     
-    (is (= true (f 36 nil)))
-    (is (= false (f 43 nil)))))
+    (is (= true (f 36 predef-env)))
+    (is (= false (f 43 predef-env)))))
 
-(deftest test-type-simple-type
+
+(deftest test-simple-type-def
+  (let [f (validation-fn-of 
+            "<simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>")]
+    
+    ))
+
+(deftest test-simple-type-reffing-predef
   (let [e (validation-expr-of 
             "<simpleType name=\"aname\" type=\"byte\">
              </simpleType>")]
@@ -98,7 +110,7 @@
     (is (= false ((f :abyte) 128 predef-env)))
   ))
 
-(deftest test-schema
+(deftest test-schema-with-predefs
   (let [f (validation-fn-of 
             "<schema>
               <element name=\"abyte\" type=\"byte\"/>
@@ -106,4 +118,16 @@
              </schema>")]
     (is (= true (f (parse-str "<anint>0</anint>") predef-env)))
     (is (= true (f (parse-str "<abyte>0</abyte>") predef-env)))
+    (is (= false (f (parse-str "<abyte>128</abyte>") predef-env)))
+  ))
+
+(deftest test-schema-with-simple-type
+  (let [f (validation-fn-of 
+            "<schema>
+              <element name=\"abyte\" type=\"byte\"/>
+              <element name=\"anint\" type=\"integer\"/>
+             </schema>")]
+    (is (= true (f (parse-str "<anint>0</anint>") predef-env)))
+    (is (= true (f (parse-str "<abyte>0</abyte>") predef-env)))
+    (is (= false (f (parse-str "<abyte>128</abyte>") predef-env)))
   ))

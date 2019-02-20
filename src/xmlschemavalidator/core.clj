@@ -57,15 +57,17 @@
   (every? #(= (:tag %) :enumeration) content))
 
 (defn parse-restriction [attrs content]
-    (fn-of 
-      (condp = (:base attrs)
-        "integer"
-        (if (enumeration? content)
-          `(or ~@(transform restriction-map content))
-          `(and ~@(transform restriction-map content)))
-        "string"
-        `(or ~@(transform restriction-map content))
-         )))
+  (fn-of 
+    `(and 
+       ~(condp = (:base attrs)
+         "integer"
+         (if (enumeration? content)
+           `(or ~@(transform restriction-map content))
+           `(and ~@(transform restriction-map content)))
+         "string"
+         `(or ~@(transform restriction-map content))
+          )
+       ~(apply-of `(~'env ~(:base attrs))))))
 
 (defn add-type-map [member]
   `(((deref ~'type-map) ~member) ~'value)
