@@ -80,14 +80,16 @@
 
 
 (deftest test-simple-type-def
-  (let [f (validation-fn-of 
+  (let [e (validation-expr-of 
             "<simpleType name=\"mytype\">
               <restriction base=\"integer\">
 		            <minInclusive value=\"36\"/>
 		            <maxInclusive value=\"42\"/>
 		          </restriction>
              </simpleType>")]
-    
+    (is (= :type (-> e meta :kind)))
+    (is (= false ((eval (second e)) 0 predef-env)))
+    (is (= true ((eval (second e)) 36 predef-env)))
     ))
 
 (deftest test-simple-type-reffing-predef

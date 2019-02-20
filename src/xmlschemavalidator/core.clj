@@ -39,7 +39,7 @@
 
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
-    #{:name} `[~(:name attrs) (fn-of ~@content)]
+    #{:name} (with-meta [(:name attrs) (fn-of (apply-of (first content)))] {:kind :type})
     #{:name :type} (with-meta [(:name attrs) (fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))] {:kind :type})
     #{} (-> content first apply-of fn-of)))
     
