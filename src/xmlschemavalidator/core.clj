@@ -1,26 +1,18 @@
 (ns xmlschemavalidator.core
   (:use [clojure.pprint])
-  (:require [clojure.data.xml :refer [parse-str parse]]
-            [clojure.spec.alpha :as s]
-            [clojure.string :refer [split]])
-  (:import [java.io ByteArrayInputStream InputStream])
-  )
+  (:require [clojure.data.xml :refer [parse-str parse]])
+  (:import [java.io ByteArrayInputStream InputStream]))
 
 (defmacro dbg [body]
   `(let [x# ~body]
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn fn-of [expr]
-  `(fn [~'value ~'env] ~expr))
-(defn first-fn-of [expr]
-  `(fn [[~'value] ~'env] ~expr))
+(defn fn-of [expr] `(fn [~'value ~'env] ~expr))
 
-(defn apply-of [expr]
-  `(~expr ~'value ~'env))
+(defn apply-of [expr] `(~expr ~'value ~'env))
 
-(defn error [msg]
-  (throw (IllegalArgumentException. msg)))
+(defn error [msg] (throw (IllegalArgumentException. msg)))
 
 (declare transform)
 (declare parse-node)
@@ -88,7 +80,6 @@
   [attrs content]
     `~(add-try-catch (map add-type-map (.split (:memberTypes attrs) " "))))
 
-
 (defn elem->name [e] (-> e :attrs :name keyword))
 
 (defn element? [v] (= (-> v meta :kind) :element))
@@ -152,7 +143,3 @@
 
 (defn validation-fn-of [element]
   (eval (validation-expr-of element)))
-
-(defmacro def-schema [schema]
-  (transform parse-map (parse-str schema)))
-
