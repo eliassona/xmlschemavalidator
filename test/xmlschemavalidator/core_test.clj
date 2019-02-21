@@ -112,6 +112,9 @@
     (is (= false ((f :abyte) 128 predef-env)))
   ))
 
+
+
+
 (deftest test-schema-with-predefs
   (let [f (validation-fn-of 
             "<schema>
@@ -142,3 +145,30 @@
     (is (= true (f (parse-str "<my>36</my>") predef-env)))
     (is (= false (f (parse-str "<my>35</my>") predef-env)))
   ))
+
+
+(deftest test-union
+  (let [f (validation-fn-of 
+            "<schema>
+             <simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>
+             <simpleType name=\"myunion\">
+                <union memberTypes=\"mytype\">  
+                   <simpleType> 
+                     <restriction base=\"string\">
+                       <enumeration value=\"small\"/> 
+                       <enumeration value=\"medium\"/> 
+                       <enumeration value=\"large\"/> 
+                     </restriction> 
+                   </simpleType>
+                </union>  
+             </simpleType>
+           <element name=\"theunion\" type=\"myunion\"/>
+           </schema>")]
+    (is (= false (f (parse-str "<theunion>35</theunion>") predef-env)))
+    (is (= true (f (parse-str "<theunion>36</theunion>") predef-env)))
+    ))

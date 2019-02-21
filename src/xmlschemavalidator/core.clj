@@ -68,7 +68,7 @@
 (defn add-try-catch [unions]
   (if (empty? (rest unions))
     `~(first unions)
-    `(try ~(first unions) (catch Exception e# ~@(rest unions)))))
+    `(try ~(first unions) (catch Exception e# ~(add-try-catch (rest unions))))))
   
 (defn element-of [attrs content]
   (apply-of `(~'env ~(:type attrs))))
@@ -76,9 +76,19 @@
 (defn parse-element [attrs content]
  (with-meta {(-> attrs :name keyword) (fn-of (element-of attrs content))} {:kind :element}))
 
+(defn member-types-of [member-types]
+  (map (fn [m] (apply-of `(~'env ~m))) (.split member-types " ")))
+
+(defn anom-types-of [types]
+  (map apply-of types))
+
 (defn parse-union 
   [attrs content]
-    `~(add-try-catch (map add-type-map (.split (:memberTypes attrs) " "))))
+    (fn-of 
+      `~(add-try-catch 
+          (concat
+            (member-types-of (:memberTypes attrs))
+            (anom-types-of content)))))
 
 (defn elem->name [e] (-> e :attrs :name keyword))
 
