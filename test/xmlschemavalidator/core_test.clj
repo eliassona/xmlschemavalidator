@@ -171,4 +171,5 @@
            </schema>")]
     (is (= false (f (parse-str "<theunion>35</theunion>") predef-env)))
     (is (= true (f (parse-str "<theunion>36</theunion>") predef-env)))
+    (is (= true (f (parse-str "<theunion>small</theunion>") predef-env)))
     ))

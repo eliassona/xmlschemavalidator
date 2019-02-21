@@ -64,11 +64,12 @@
 (defn add-type-map [member]
   `(((deref ~'type-map) ~member) ~'value)
   )
+(defn throw-if-false [b] (if b b (throw (IllegalArgumentException.))))
 
 (defn add-try-catch [unions]
   (if (empty? (rest unions))
     `~(first unions)
-    `(try ~(first unions) (catch Exception e# ~(add-try-catch (rest unions))))))
+    `(try (throw-if-false ~(first unions)) (catch Exception e# ~(add-try-catch (rest unions))))))
   
 (defn element-of [attrs content]
   (apply-of `(~'env ~(:type attrs))))
@@ -99,9 +100,11 @@
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
 
+(defn to-str [v] (if (symbol? v) (str v) v))
+
 (defn content-of [value]
   (if (simple-type? value)
-    (-> value first read-string)
+    (-> value first read-string to-str)
     value))
 
 (defn parse-schema [attrs content]
