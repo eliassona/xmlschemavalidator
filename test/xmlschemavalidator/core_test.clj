@@ -173,3 +173,73 @@
     (is (= true (f (parse-str "<theunion>36</theunion>") predef-env)))
     (is (= true (f (parse-str "<theunion>small</theunion>") predef-env)))
     ))
+
+
+(deftest test-sequence 
+  (let [f (validation-fn-of 
+          "<sequence>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </sequence>")
+        v (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>"))]
+    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
+    ))
+(deftest test-all 
+  (let [f (validation-fn-of 
+          "<all>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </all>")]
+    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
+    ))
+(deftest test-choice 
+  (let [f (validation-fn-of 
+          "<choice>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </choice>")]
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq2>1</seq2></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
+    ))
+
+
+(deftest test-complex-type 
+  (let [f (validation-fn-of 
+    "<schema>
+    <simpleType name=\"stringenum\">
+      <restriction base=\"string\">
+        <enumeration value=\"small\"/>
+        <enumeration value=\"medium\"/>
+        <enumeration value=\"large\"/>
+      </restriction>
+    </simpleType>
+		<simpleType name =\"intrange\">
+		      <restriction base=\"integer\">
+		        <minInclusive value=\"36\"/>
+		        <maxInclusive value=\"42\"/>
+		      </restriction>
+		    </simpleType>
+		    <simpleType name =\"theunion\">
+		    <union memberTypes=\"stringenum intrange\"/>
+		    </simpleType>
+		    <complexType name=\"cp\">
+		      <sequence>
+		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
+		      </sequence>
+		    </complexType>
+		<element name=\"udr\" type=\"cp\">
+		  </element>
+    </schema>")]))
+    

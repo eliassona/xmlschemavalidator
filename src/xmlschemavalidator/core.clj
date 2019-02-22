@@ -93,9 +93,11 @@
 
 (defn elem->name [e] (-> e :attrs :name keyword))
 
-(defn element? [v] (= (-> v meta :kind) :element))
+(defn kind [v] (-> v meta :kind))
 
-(defn type? [v] (= (-> v meta :kind) :type))
+(defn element? [v] (= (kind v) :element))
+
+(defn type? [v] (= (kind v) :type))
 
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
@@ -115,19 +117,57 @@
              elems# ~(apply merge elements)]
          ((elems# (:tag ~'value)) (content-of (:content ~'value)) ~'env)))))
 
+
 (defn parse-sequence [attrs content]
-  `(fn [~'value] ~(map elem->name (dbg content))))
+  (fn-of 
+    `(let [~'elem-map ~(apply merge content)]
+        (if
+          (= (keys ~'elem-map) (map :tag ~'value))
+          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          false)
+         )))
+
+(defn parse-choice [attrs content]
+  (fn-of 
+    `(let [~'elem-map ~(apply merge content)]
+        (if
+          (and (= (count ~'value) 1)
+               (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
+          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          false)
+         )))
+
+(defn parse-all [attrs content]
+  (fn-of 
+    `(let [~'elem-map ~(apply merge content)]
+        (if
+          (and 
+            (= (count ~'elem-map) (count ~'value))
+            (= (.keySet ~'elem-map) (set (map :tag ~'value))))
+          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          false)
+         )))
+
+
+
+
+
+(defn parse-complex-type [attrs content]
+  (fn-of attrs))
 
 (def parse-map 
   {:simpleType parse-simple-type
    :restriction parse-restriction
    :union parse-union,
    :sequence parse-sequence
+   :choice parse-choice
    :schema parse-schema
    :element parse-element
-   :complexType parse-element})
+   :complexType parse-simple-type
+   :all parse-all})
 
 (def allowed (fn [value _] true))
+
 
 (def predef-env
   {
@@ -136,10 +176,10 @@
    "double" allowed
    "decimal" allowed
    "integer" allowed
-   "positiveInteger" (fn [value _] (> value 0))
-   "negativeInteger" (fn [value _] (< value 0))
-   "nonPositiveInteger" (fn [value _] (<= value 0))
-   "nonNegativeInteger" (fn [value _] (>= value 0))
+   "positiveInteger" (fn [value env] (and (> value 0) ((env "integer") value env)))
+   "negativeInteger" (fn [value env] (and (< value 0) ((env "integer") value env)))
+   "nonPositiveInteger" (fn [value env] (and (<= value 0) ((env "integer") value env)))
+   "nonNegativeInteger" (fn [value env] (and (>= value 0) ((env "integer") value env)))
    "long" (fn [value _] (and (<= value 9223372036854775807) (>= value -9223372036854775808)))
    "int" (fn [value _] (and (<= value 2147483647) (>= value -2147483648)))
    "short" (fn [value _] (and (<= value 32767) (>= value -32768)))
@@ -147,7 +187,7 @@
    "unsignedLong" (fn [value _] (and (<= value 18446744073709551615) (>= value 0)))
    "unsignedInt" (fn [value _] (and (<= value 4294967295) (>= value 0)))
    "unsignedShort" (fn [value _] (and (<= value 65535) (>= value 0)))
-   "unsignedVByte" (fn [value _] (and (<= value 255) (>= value 0)))
+   "unsignedByte" (fn [value _] (and (<= value 255) (>= value 0)))
    }
   )
 
