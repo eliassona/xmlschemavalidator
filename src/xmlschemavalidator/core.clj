@@ -40,10 +40,21 @@
 (defn parse-int-attr [op attrs _]
   `(~op ~'value ~(-> attrs :value read-string)))
 
+(defn parse-pattern [attrs _]
+  `(.matches ~'value ~(-> attrs :value str)))
+
+(defn parse-str-length [op attrs _]
+  `(~op (count ~'value) ~(-> attrs :value read-string)))
+
+
+
 (def restriction-map 
   {:minInclusive (partial parse-int-attr '>=),
    :maxInclusive (partial parse-int-attr '<=)
-   :enumeration (partial parse-str-attr '=)})
+   :enumeration (partial parse-str-attr '=)
+   :pattern parse-pattern
+   :minLength (partial parse-str-length >=)
+   :maxLength (partial parse-str-length <=)})
 
 (defn enumeration? [content]
   (every? #(= (:tag %) :enumeration) content))
@@ -126,8 +137,7 @@
         (if
           (= (keys ~'elem-map) (map :tag ~'value))
           (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false)
-         )))
+          false))))
 
 (defn parse-choice [attrs content]
   (fn-of 
@@ -136,8 +146,7 @@
           (and (= (count ~'value) 1)
                (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
           (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false)
-         )))
+          false))))
 
 (defn parse-all [attrs content]
   (fn-of 
@@ -147,12 +156,7 @@
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
           (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false)
-         )))
-
-
-
-
+          false))))
 
 (defn parse-complex-type [attrs content]
   (fn-of attrs))
@@ -171,6 +175,10 @@
 (def allowed (fn [value _] true))
 
 (def numeric? (fn [value _] (number? value)))
+
+(defmacro def-base [expr base]
+  `(fn [~'value ~'env] (and ((~'env ~base) ~'value ~'env) ~expr)))
+
 (def predef-env
   {
    "string" (fn [value _] (string? value))
@@ -178,18 +186,18 @@
    "double" numeric?
    "decimal" numeric?
    "integer" numeric?
-   "positiveInteger" (fn [value env] (and (> value 0) ((env "integer") value env)))
-   "negativeInteger" (fn [value env] (and (< value 0) ((env "integer") value env)))
-   "nonPositiveInteger" (fn [value env] (and (<= value 0) ((env "integer") value env)))
-   "nonNegativeInteger" (fn [value env] (and (>= value 0) ((env "integer") value env)))
-   "long" (fn [value _] (and (<= value 9223372036854775807) (>= value -9223372036854775808)))
-   "int" (fn [value _] (and (<= value 2147483647) (>= value -2147483648)))
-   "short" (fn [value _] (and (<= value 32767) (>= value -32768)))
-   "byte" (fn [value _] (and (<= value 127) (>= value -128)))
-   "unsignedLong" (fn [value _] (and (<= value 18446744073709551615) (>= value 0)))
-   "unsignedInt" (fn [value _] (and (<= value 4294967295) (>= value 0)))
-   "unsignedShort" (fn [value _] (and (<= value 65535) (>= value 0)))
-   "unsignedByte" (fn [value _] (and (<= value 255) (>= value 0)))
+   "positiveInteger" (def-base (> value 0) "integer")
+   "negativeInteger" (def-base (< value 0) "integer")
+   "nonPositiveInteger" (def-base (<= value 0) "integer")
+   "nonNegativeInteger" (def-base (>= value 0) "integer")
+   "long" (def-base (and (<= value 9223372036854775807) (>= value -9223372036854775808)) "integer")
+   "int" (def-base (and (<= value 2147483647) (>= value -2147483648)) "integer")
+   "short" (def-base (and (<= value 32767) (>= value -32768)) "integer")
+   "byte" (def-base (and (<= value 127) (>= value -128)) "integer")
+   "unsignedLong" (def-base (and (<= value 18446744073709551615) (>= value 0)) "integer")
+   "unsignedInt" (def-base (and (<= value 4294967295) (>= value 0)) "unsignedLong")
+   "unsignedShort" (def-base (and (<= value 65535) (>= value 0)) "unsignedInt")
+   "unsignedByte" (def-base (and (<= value 255) (>= value 0)) "unsignedShort")
    }
   )
 
