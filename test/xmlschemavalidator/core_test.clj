@@ -5,44 +5,6 @@
             [xmlschemavalidator.lazymap :refer [lazy-map]]
             [xmlschemavalidator.core :refer :all]))
 
-
-
-(def schema "<schema>
-    <simpleType name=\"stringenum\">
-      <restriction base=\"string\">
-        <enumeration value=\"small\"/>
-        <enumeration value=\"medium\"/>
-        <enumeration value=\"large\"/>
-      </restriction>
-    </simpleType>
-		<simpleType name =\"intrange\">
-		      <restriction base=\"integer\">
-		        <minInclusive value=\"36\"/>
-		        <maxInclusive value=\"42\"/>
-		      </restriction>
-		    </simpleType>
-		    <simpleType name =\"theunion\">
-		    <union memberTypes=\"stringenum intrange\"/>
-		    </simpleType>
-		<element name=\"udr\">
-		    <complexType>
-		      <sequence>
-		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
-		      </sequence>
-		    </complexType>
-		  </element>
-</schema>")
-
-(def value 
-  "<udr>
-     <uniontest>36</uniontest>
-     <uniontest>40</uniontest>
-   </udr>")
-
-(def schema-res
-    (fn [data] {:udr {:uniontest (fn [data])}}))
-
-
 (deftest test-enum-restriction
   (let [f (validation-fn-of "<restriction base=\"string\">
 		        <enumeration value=\"small\"/>
@@ -193,8 +155,8 @@
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
 		       </all>")]
-    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
-    (is (= true (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>asdf</seq2></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq2>asdf</seq2><seq1>10</seq1></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
@@ -208,7 +170,7 @@
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
     (is (= true (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
-    (is (= true (f (:content (parse-str "<udr><seq2>1</seq2></udr>")) predef-env)))
+    (is (= true (f (:content (parse-str "<udr><seq2>asdf</seq2></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
     ))
@@ -225,21 +187,28 @@
       </restriction>
     </simpleType>
 		<simpleType name =\"intrange\">
-		      <restriction base=\"integer\">
-		        <minInclusive value=\"36\"/>
-		        <maxInclusive value=\"42\"/>
-		      </restriction>
-		    </simpleType>
-		    <simpleType name =\"theunion\">
-		    <union memberTypes=\"stringenum intrange\"/>
-		    </simpleType>
-		    <complexType name=\"cp\">
-		      <sequence>
-		        <element name=\"uniontest\" type=\"theunion\" maxOccurs=\"unbounded\"/>
-		      </sequence>
-		    </complexType>
+		   <restriction base=\"integer\">
+	        <minInclusive value=\"36\"/>
+	        <maxInclusive value=\"42\"/>
+	     </restriction>
+		 </simpleType>
+		 <simpleType name =\"theunion\">
+		   <union memberTypes=\"stringenum intrange\"/>
+		 </simpleType>
+     <complexType name=\"cp\">
+       <sequence>
+         <element name=\"uniontest\" type=\"theunion\"/>
+       </sequence>
+     </complexType>
 		<element name=\"udr\" type=\"cp\">
 		  </element>
     </schema>")]
+    (is (= false (f (parse-str "<udr><uniontest>0</uniontest></udr>") predef-env)))
+    (is (= true (f (parse-str "<udr><uniontest>36</uniontest></udr>") predef-env)))
+    (is (= true (f (parse-str "<udr><uniontest>small</uniontest></udr>") predef-env)))
+    (is (= false (f (parse-str "<udr><uniontest>randomstring</uniontest></udr>") predef-env)))
     ))
     
+
+
+

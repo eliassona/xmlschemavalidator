@@ -50,7 +50,8 @@
 
 (defn parse-restriction [attrs content]
   (fn-of 
-    `(and 
+    `(and
+       ~(apply-of `(~'env ~(:base attrs)))
        ~(condp = (:base attrs)
          "integer"
          (if (enumeration? content)
@@ -59,7 +60,7 @@
          "string"
          `(or ~@(transform restriction-map content))
           )
-       ~(apply-of `(~'env ~(:base attrs))))))
+       )))
 
 (defn add-type-map [member]
   `(((deref ~'type-map) ~member) ~'value)
@@ -197,3 +198,6 @@
 
 (defn validation-fn-of [element]
   (eval (validation-expr-of element)))
+
+
+
