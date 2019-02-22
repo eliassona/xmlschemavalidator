@@ -105,9 +105,10 @@
 (defn to-str [v] (if (symbol? v) (str v) v))
 
 (defn content-of [value]
-  (if (simple-type? value)
-    (-> value first read-string to-str)
-    value))
+  (let [value (:content value)]
+    (if (simple-type? value)
+      (-> value first read-string to-str)
+      value)))
 
 (defn parse-schema [attrs content]
   (let [types (filter type? content)
@@ -115,7 +116,7 @@
     (fn-of 
       `(let [~'env (merge ~(apply merge types) ~'env)
              elems# ~(apply merge elements)]
-         ((elems# (:tag ~'value)) (content-of (:content ~'value)) ~'env)))))
+         ((elems# (:tag ~'value)) (content-of ~'value) ~'env)))))
 
 
 (defn parse-sequence [attrs content]
@@ -123,7 +124,7 @@
     `(let [~'elem-map ~(apply merge content)]
         (if
           (= (keys ~'elem-map) (map :tag ~'value))
-          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
           false)
          )))
 
@@ -133,7 +134,7 @@
         (if
           (and (= (count ~'value) 1)
                (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
           false)
          )))
 
@@ -144,7 +145,7 @@
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
-          (every? identity (map (comp (fn [~'tag] ~(apply-of `(~'elem-map ~'tag))) :tag) ~'value))
+          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
           false)
          )))
 
@@ -168,14 +169,14 @@
 
 (def allowed (fn [value _] true))
 
-
+(def numeric? (fn [value _] (number? value)))
 (def predef-env
   {
-   "string" allowed
-   "float" allowed
-   "double" allowed
-   "decimal" allowed
-   "integer" allowed
+   "string" (fn [value _] (string? value))
+   "float" numeric?
+   "double" numeric?
+   "decimal" numeric?
+   "integer" numeric?
    "positiveInteger" (fn [value env] (and (> value 0) ((env "integer") value env)))
    "negativeInteger" (fn [value env] (and (< value 0) ((env "integer") value env)))
    "nonPositiveInteger" (fn [value env] (and (<= value 0) ((env "integer") value env)))

@@ -180,10 +180,9 @@
           "<sequence>
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
-		       </sequence>")
-        v (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>"))]
-    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-env)))
-    (is (= false (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-env)))
+		       </sequence>")]
+    (is (= true (f (:content (parse-str "<udr><seq1>1</seq1><seq2>adsf</seq2></udr>")) predef-env)))
+    (is (= false (f (:content (parse-str "<udr><seq2>2</seq2><seq1>asdf</seq1></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-env)))
     (is (= false (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-env)))
@@ -241,5 +240,6 @@
 		    </complexType>
 		<element name=\"udr\" type=\"cp\">
 		  </element>
-    </schema>")]))
+    </schema>")]
+    ))
     
