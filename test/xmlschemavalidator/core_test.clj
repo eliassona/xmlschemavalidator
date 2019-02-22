@@ -210,5 +210,22 @@
     ))
     
 
-
+(deftest test-ref
+           (validation-expr-of "<schema>
+             <element name=\"mytype\">
+	             <simpleType>
+	              <restriction base=\"integer\">
+			            <minInclusive value=\"36\"/>
+			            <maxInclusive value=\"42\"/>
+			          </restriction>
+	             </simpleType>
+             </element>
+				     <element name=\"myref\">
+					     <complexType>
+					       <sequence>
+					         <element ref=\"mytype\"/>
+					       </sequence>
+					     </complexType>
+				     </element>
+           </schema>"))
 

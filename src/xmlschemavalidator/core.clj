@@ -73,9 +73,7 @@
           )
        )))
 
-(defn add-type-map [member]
-  `(((deref ~'type-map) ~member) ~'value)
-  )
+
 (defn throw-if-false [b] (if b b (throw (IllegalArgumentException.))))
 
 (defn add-try-catch [unions]
@@ -87,7 +85,13 @@
   (apply-of `(~'env ~(:type attrs))))
 
 (defn parse-element [attrs content]
- (with-meta {(-> attrs :name keyword) (fn-of (element-of attrs content))} {:kind :element}))
+ (with-meta 
+   (condp = (.keySet attrs)
+     #{:name :type}
+     {(-> attrs :name keyword) (fn-of (element-of attrs content))}
+     #{:name} (first content)
+     #{:ref} content)
+   {:kind :element}))
 
 (defn member-types-of [member-types]
   (map (fn [m] (apply-of `(~'env ~m))) (.split member-types " ")))
