@@ -12,6 +12,9 @@
 
 (defn apply-of [expr] `(~expr ~'value ~'env))
 
+(defmacro def-base [expr base]
+  (fn-of `(and ((~'env ~base) ~'value ~'env) ~expr)))
+
 (defn error [msg] (throw (IllegalArgumentException. msg)))
 
 (declare transform)
@@ -46,8 +49,6 @@
 (defn parse-str-length [op attrs _]
   `(~op (count ~'value) ~(-> attrs :value read-string)))
 
-
-
 (def restriction-map 
   {:minInclusive (partial parse-int-attr '>=),
    :maxInclusive (partial parse-int-attr '<=)
@@ -60,19 +61,11 @@
   (every? #(= (:tag %) :enumeration) content))
 
 (defn parse-restriction [attrs content]
-  (fn-of 
-    `(and
-       ~(apply-of `(~'env ~(:base attrs)))
-       ~(condp = (:base attrs)
-         "integer"
-         (if (enumeration? content)
-           `(or ~@(transform restriction-map content))
-           `(and ~@(transform restriction-map content)))
-         "string"
-         `(or ~@(transform restriction-map content))
-          )
-       )))
-
+  `(def-base 
+     ~(if (enumeration? content)
+       `(or ~@(transform restriction-map content))
+       `(and ~@(transform restriction-map content)))
+     ~(:base attrs)))
 
 (defn throw-if-false [b] (if b b (throw (IllegalArgumentException.))))
 
@@ -180,8 +173,7 @@
 
 (def numeric? (fn [value _] (number? value)))
 
-(defmacro def-base [expr base]
-  `(fn [~'value ~'env] (and ((~'env ~base) ~'value ~'env) ~expr)))
+
 
 (def predef-env
   {
