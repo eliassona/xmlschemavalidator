@@ -13,7 +13,10 @@
 (defn apply-of [expr] `(~expr ~'value ~'env))
 
 (defmacro def-base [expr base]
-  (fn-of `(and ((~'env ~base) ~'value ~'env) ~expr)))
+  (fn-of 
+    `(let [t# ((~'env ~base) ~'value ~'env)]
+       [(and (first t# ) ~expr) (second t#)])))
+  ;(fn-of `(and ((~'env ~base) ~'value ~'env) ~expr)))
 
 (defn error [msg] (throw (IllegalArgumentException. msg)))
 
@@ -67,7 +70,7 @@
        `(and ~@(transform restriction-map content)))
      ~(:base attrs)))
 
-(defn throw-if-false [b] (if b b (throw (IllegalArgumentException.))))
+(defn throw-if-false [b] (if (first b) b (throw (IllegalArgumentException.))))
 
 (defn add-try-catch [unions]
   (if (empty? (rest unions))
@@ -81,7 +84,7 @@
  (with-meta 
    (condp = (.keySet attrs)
      #{:name :type}
-     {(-> attrs :name keyword) (fn-of (element-of attrs content))}
+     {(-> attrs :name keyword) (fn-of `(conj ~(element-of attrs content) ~(-> attrs :name keyword)))}
      #{:name} (first content)
      #{:ref} content)
    {:kind :element}))
@@ -127,14 +130,16 @@
              elems# ~(apply merge elements)]
          ((elems# (:tag ~'value)) (content-of ~'value) ~'env)))))
 
+(defn my-identity [v]
+  (dbg v))
 
 (defn parse-sequence [attrs content]
   (fn-of 
     `(let [~'elem-map ~(apply merge content)]
         (if
           (= (keys ~'elem-map) (map :tag ~'value))
-          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false))))
+          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
+          [false []]))))
 
 (defn parse-choice [attrs content]
   (fn-of 
@@ -142,8 +147,8 @@
         (if
           (and (= (count ~'value) 1)
                (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false))))
+          [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'env)]
+          [false []]))))
 
 (defn parse-all [attrs content]
   (fn-of 
@@ -152,8 +157,8 @@
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
-          (every? identity (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value))
-          false))))
+          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
+          [false []]))))
 
 (defn parse-complex-type [attrs content]
   (fn-of attrs))
@@ -171,13 +176,13 @@
 
 (def allowed (fn [value _] true))
 
-(def numeric? (fn [value _] (number? value)))
+(def numeric? (fn [value _] [(number? value) value]))
 
 
 
 (def predef-env
   {
-   "string" (fn [value _] (string? value))
+   "string" (fn [value _] [(string? value) value])
    "float" numeric?
    "double" numeric?
    "decimal" numeric?
@@ -202,6 +207,28 @@
 
 (defn validation-fn-of [element]
   (eval (validation-expr-of element)))
+
+(defn map-of [value]
+  (if
+    (coll? value)
+    (if (instance? Boolean (first value))
+      (let [tag (nth value 2)]
+        (with-meta {tag (map-of (second value))} {tag (first value)}))
+      (apply merge (map map-of value)))
+    value)
+  )
+
+(defn decode [schema value]
+  (let [schema (validation-fn-of schema)]
+    (let [value (schema (parse-str value) predef-env)]
+      (map-of value)
+      ))
+  
+      #_(cond 
+         (map? value) 
+         {(:tag value) (decode (:content value))}
+         (string? value) (read-string value)
+         :else (map decode value)))
 
 
 
