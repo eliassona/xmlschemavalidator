@@ -16,9 +16,6 @@
   (fn-of 
     `(let [t# ((~'env ~base) ~'value ~'env)]
        [(and (first t# ) ~expr) (second t#)])))
-  ;(fn-of `(and ((~'env ~base) ~'value ~'env) ~expr)))
-
-(defn error [msg] (throw (IllegalArgumentException. msg)))
 
 (declare transform)
 (declare parse-node)
@@ -43,6 +40,7 @@
     
 (defn parse-str-attr [op attrs _]
   `(~op ~'value ~(-> attrs :value)))
+
 (defn parse-int-attr [op attrs _]
   `(~op ~'value ~(-> attrs :value read-string)))
 
@@ -130,9 +128,6 @@
              elems# ~(apply merge elements)]
          ((elems# (:tag ~'value)) (content-of ~'value) ~'env)))))
 
-(defn my-identity [v]
-  (dbg v))
-
 (defn parse-sequence [attrs content]
   (fn-of 
     `(let [~'elem-map ~(apply merge content)]
@@ -174,11 +169,7 @@
    :complexType parse-simple-type
    :all parse-all})
 
-(def allowed (fn [value _] true))
-
 (def numeric? (fn [value _] [(number? value) value]))
-
-
 
 (def predef-env
   {
@@ -215,20 +206,12 @@
       (let [tag (nth value 2)]
         (with-meta {tag (map-of (second value))} {tag (first value)}))
       (apply merge (map map-of value)))
-    value)
-  )
+    value))
 
 (defn decode [schema value]
   (let [schema (validation-fn-of schema)]
     (let [value (schema (parse-str value) predef-env)]
-      (map-of value)
-      ))
-  
-      #_(cond 
-         (map? value) 
-         {(:tag value) (decode (:content value))}
-         (string? value) (read-string value)
-         :else (map decode value)))
+      (map-of value))))
 
 
 
