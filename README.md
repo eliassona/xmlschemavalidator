@@ -76,6 +76,13 @@ Let's decode something that is valid
 => (valid? (d "<udr><uniontest>medium</uniontest></udr>")) ; it's valid due to the stringenum type and it enumeration restriction
 true
 ```
+
+##The following tags are missing (and maybe more)
+* ref
+* simpleContext
+* attribute
+
+
 ## License
 
 Copyright © 2019 FIXME
