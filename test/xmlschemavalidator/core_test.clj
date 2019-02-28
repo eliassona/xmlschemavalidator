@@ -267,25 +267,38 @@
 
 (deftest test-complex-content
   (let [env (assoc predef-env "personinfo" (fn [value env] (if value [true [[true "Donald" :firstname][true "Duck" :lastname]]] [:sequence [:firstname :lastname]])))
-        schema (validation-fn-of "<extension base=\"personinfo\">
+        schema (validation-fn-of 
+         "<extension base=\"personinfo\">
 			      <sequence>
 			        <element name=\"address\" type=\"string\"/>
 			        <element name=\"city\" type=\"string\"/>
 			        <element name=\"country\" type=\"string\"/>
+			        <element name=\"zip\" type=\"byte\"/>
 			      </sequence>
 			    </extension>")]
-    (is (= [:sequence [:firstname :lastname :address :city :country]] (schema nil env)))
-    (is (= [true [[true "Broadway" :address] [true "New" :city] [true "USA" :country] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+    (is (= [:sequence [:firstname :lastname :address :city :country :zip]] (schema nil env)))
+    (is (= [true [[true "Broadway" :address] [true "New" :city] [true "USA" :country] [true 123 :zip] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
                  (parse-str  "<employee>
                               <address>Broadway</address>
                               <city>New York</city>
                               <country>USA</country>
                               <firstname>Donald</firstname>
                               <lastname>Duck</lastname>
+                              <zip>123</zip>
                             </employee>")) env)))
     
-    (is (= [true [[true "Broadway" :address] [true "LA" :city] [true "USA" :country] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+    (is (= [true [[true "Broadway" :address] [true "LA" :city] [true "USA" :country] [true 123 :zip] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
                  (parse-str  "<employee>
+                              <address>Broadway</address>
+                              <city>LA</city>
+                              <country>USA</country>
+                              <firstname>Donald</firstname>
+                              <lastname>Duck</lastname>
+                              <zip>123</zip>
+                            </employee>")) env)))
+    
+    (is (= [false [[true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+                   (parse-str  "<employee>
                               <address>Broadway</address>
                               <city>LA</city>
                               <country>USA</country>
@@ -293,7 +306,15 @@
                               <lastname>Duck</lastname>
                             </employee>")) env)))
     
-   
+   (is (= [true [[true "Broadway" :address] [true "LA" :city] [true "USA" :country] [false 128 :zip] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+                 (parse-str  "<employee>
+                              <address>Broadway</address>
+                              <city>LA</city>
+                              <country>USA</country>
+                              <firstname>Donald</firstname>
+                              <lastname>Duck</lastname>
+                              <zip>128</zip>
+                            </employee>")) env)))
   ))
 
 
