@@ -1,10 +1,68 @@
 # xmlschemavalidator
 
-A Clojure library designed to ... well, that part is up to you.
+A XML Schema decoder and validator
 
 ## Usage
 
-FIXME
+```clojure
+(ns example.core
+  (:require [xmlschemavalidator.core :refer [decode]]))
+  
+```
+
+Define an XML schema
+
+```clojure
+(def schema "<schema>
+    <simpleType name=\"stringenum\">
+      <restriction base=\"string\">
+        <enumeration value=\"small\"/>
+        <enumeration value=\"medium\"/>
+        <enumeration value=\"large\"/>
+      </restriction>
+    </simpleType>
+		<simpleType name =\"intrange\">
+		   <restriction base=\"integer\">
+	        <minInclusive value=\"36\"/>
+	        <maxInclusive value=\"42\"/>
+	     </restriction>
+		 </simpleType>
+		 <simpleType name =\"theunion\">
+		   <union memberTypes=\"stringenum intrange\"/>
+		 </simpleType>
+     <complexType name=\"cp\">
+       <sequence>
+         <element name=\"uniontest\" type=\"theunion\"/>
+       </sequence>
+     </complexType>
+		<element name=\"udr\" type=\"cp\">
+		  </element>
+    </schema>")
+```
+
+And decode...
+
+```clojure
+=> (decode schema "<udr><uniontest>0</uniontest></udr>")
+{:udr {:uniontest 0}}
+```
+To find out if the decode is valid
+
+```clojure
+=> (meta (decode schema "<udr><uniontest>0</uniontest></udr>"))
+{:udr true} ;udr level is valid
+
+=> (-> (decode schema "<udr><uniontest>0</uniontest></udr>") :udr meta)
+{:uniontest false} ;uniontest level invalid due to the intrange type and its restriction 
+```
+
+You could pre-compile the schema by applying partial on the schema
+
+```clojure
+=> (def d (partial decode schema))
+=> (d "<udr><uniontest>0</uniontest></udr>")
+{:udr {:uniontest 0}}
+```
 
 ## License
 

@@ -12,6 +12,8 @@
 
 (defn apply-of [expr] `(~expr ~'value ~'env))
 
+(defn delegate [attrs content] (fn-of (apply-of (first content))))
+
 (defmacro def-base [expr base]
   (fn-of 
     `(let [t# ((~'env ~base) ~'value ~'env)]
@@ -181,9 +183,11 @@
            ]
        (if 
          ~'value
-         (ext-and
-           (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'env)
-           (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'env))
+         (if (= (first base#) (first ext#))
+           (ext-and
+             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'env)
+             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'env))
+           [false []])
          [(first base#) (concat (second base#) (second ext#))])
          )))
   
@@ -197,7 +201,7 @@
    :schema parse-schema
    :element parse-element
    :complexType parse-simple-type
-   :complexContent (fn [attrs content] (fn-of (apply-of content)))
+   :complexContent delegate
    :extension parse-extension
    :all parse-all})
 

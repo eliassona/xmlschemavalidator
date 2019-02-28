@@ -268,14 +268,16 @@
 (deftest test-complex-content
   (let [env (assoc predef-env "personinfo" (fn [value env] (if value [true [[true "Donald" :firstname][true "Duck" :lastname]]] [:sequence [:firstname :lastname]])))
         schema (validation-fn-of 
-         "<extension base=\"personinfo\">
+         "<complexContent>        
+         <extension base=\"personinfo\">
 			      <sequence>
 			        <element name=\"address\" type=\"string\"/>
 			        <element name=\"city\" type=\"string\"/>
 			        <element name=\"country\" type=\"string\"/>
 			        <element name=\"zip\" type=\"byte\"/>
 			      </sequence>
-			    </extension>")]
+			    </extension>
+          </complexContent>")]
     (is (= [:sequence [:firstname :lastname :address :city :country :zip]] (schema nil env)))
     (is (= [true [[true "Broadway" :address] [true "New" :city] [true "USA" :country] [true 123 :zip] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
                  (parse-str  "<employee>
@@ -318,8 +320,8 @@
   ))
 
 
-#_(deftest test-complex-content
-   (let [text "
+(deftest test-complex-content-with-element
+  (let [text "
 			<schema><complexType name=\"personinfo\">
 			  <sequence>
 			    <element name=\"firstname\" type=\"string\"/>
@@ -340,12 +342,23 @@
 			</complexType>
 			<element name=\"employee\" type=\"fullpersoninfo\"/>
       </schema>"]
-     (is (= {} (decode text "<employee>
-                              <address>Broadway</address>
-                              <city>New York</city>
-                              <country>USA</country>
-                              <firstname>Donald</firstname>
-                              <lastname>Duck</lastname>
-                            </employee>")))
-     ))
+       (let [res (decode text "<employee>
+                          <address>Broadway</address>
+                          <city>New York</city>
+                          <country>USA</country>
+                          <firstname>Donald</firstname>
+                          <lastname>Duck</lastname>
+                        </employee>")]
+         (is (= {:employee {:address "Broadway", :city "New", :country "USA", :firstname "Donald", :lastname "Duck"}} res))
+         (is (= true (-> res meta :employee))))
+       (let [res (decode text "<employee>
+                          <city>New York</city>
+                          <country>USA</country>
+                          <firstname>Donald</firstname>
+                          <lastname>Duck</lastname>
+                        </employee>")]
+         (is (= {:employee {:firstname "Donald", :lastname "Duck"}} res))
+         (is (= false (-> res meta :employee))))
+       
+       ))
 
