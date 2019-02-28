@@ -70,6 +70,12 @@ Check the whole decoding was valid
 false
 ```
 
+Let's decode something that is valid
+
+```clojure
+=> (valid? (d "<udr><uniontest>medium</uniontest></udr>")) ; it's valid due to the stringenum type and it enumeration restriction
+true
+```
 ## License
 
 Copyright © 2019 FIXME
