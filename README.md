@@ -6,7 +6,7 @@ A XML Schema decoder and validator
 
 ```clojure
 (ns example.core
-  (:require [xmlschemavalidator.core :refer [decode]]))
+  (:require [xmlschemavalidator.core :refer [decode valid?]]))
   
 ```
 
@@ -62,6 +62,12 @@ You could pre-compile the schema by applying partial on the schema
 => (def d (partial decode schema))
 => (d "<udr><uniontest>0</uniontest></udr>")
 {:udr {:uniontest 0}}
+```
+Check the whole decoding was valid
+
+```clojure
+=> (valid? (d "<udr><uniontest>0</uniontest></udr>"))
+false
 ```
 
 ## License

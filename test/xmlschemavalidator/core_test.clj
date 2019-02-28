@@ -240,6 +240,7 @@
     value (decode schema "<udr><uniontest>0</uniontest></udr>")]
     (is (= {:udr {:uniontest 0}} value))
     (is (= {:udr true} (meta value)))
+    (is (= false (valid? value)))
     (is (= {:uniontest false} (-> value :udr meta)))
     (is (= {:uniontest true} (-> (decode schema "<udr><uniontest>36</uniontest></udr>") :udr meta)))
     ))
@@ -358,7 +359,8 @@
                           <lastname>Duck</lastname>
                         </employee>")]
          (is (= {:employee {:firstname "Donald", :lastname "Duck"}} res))
-         (is (= false (-> res meta :employee))))
+         (is (= false (-> res meta :employee)))
+         (is (= false (valid? res))))
        
        ))
 

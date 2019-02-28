@@ -250,4 +250,9 @@
       (map-of value))))
 
 
+(defn valid? [value]
+  (letfn [(valid?-fn [value] 
+            (concat (vals (meta value)) (mapcat valid?-fn (filter map? (vals value)))))]
+    (every? identity (valid?-fn value))
+  ))
 
