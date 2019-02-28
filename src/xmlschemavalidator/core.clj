@@ -128,35 +128,65 @@
              elems# ~(apply merge elements)]
          ((elems# (:tag ~'value)) (content-of ~'value) ~'env)))))
 
+
+
 (defn parse-sequence [attrs content]
   (fn-of 
     `(let [~'elem-map ~(apply merge content)]
-        (if
-          (= (keys ~'elem-map) (map :tag ~'value))
-          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
-          [false []]))))
+       (if ~'value
+         (if
+           (= (keys ~'elem-map) (map :tag ~'value)) ;TODO order!
+           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
+           [false []])
+         [:sequence (keys ~'elem-map)]))))
+
+
 
 (defn parse-choice [attrs content]
   (fn-of 
     `(let [~'elem-map ~(apply merge content)]
-        (if
-          (and (= (count ~'value) 1)
-               (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-          [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'env)]
-          [false []]))))
+       (if ~'value
+         (if
+           (and (= (count ~'value) 1)
+                (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
+           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'env)]
+           [false []])
+         [:choice (keys ~'elem-map)]))))
 
 (defn parse-all [attrs content]
   (fn-of 
     `(let [~'elem-map ~(apply merge content)]
+       (if ~'value
         (if
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
-          [false []]))))
+          [false []])
+        [:all (keys ~'elem-map)]))))
 
-(defn parse-complex-type [attrs content]
-  (fn-of attrs))
+(defn remove-values-not-in-coll [values in-set]
+  (let [in-set (set in-set)]
+    (filter #(contains? in-set (:tag %)) values)))
+
+(defn ext-and [base ext]
+  [(and (first base) (first ext)) (concat (second base) (second ext))])
+
+(defn parse-extension [attrs content]
+  (fn-of 
+    `(let [base-fn# (~'env ~(-> attrs :base)) 
+           base# (base-fn# nil ~'env)
+           ext-fn# ~(first content)
+           ext# (ext-fn# nil ~'env)
+           ]
+       (if 
+         ~'value
+         (ext-and
+           (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'env)
+           (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'env))
+         [(first base#) (concat (second base#) (second ext#))])
+         )))
+  
 
 (def parse-map 
   {:simpleType parse-simple-type
@@ -167,6 +197,8 @@
    :schema parse-schema
    :element parse-element
    :complexType parse-simple-type
+   :complexContent (fn [attrs content] (fn-of (apply-of content)))
+   :extension parse-extension
    :all parse-all})
 
 (def numeric? (fn [value _] [(number? value) value]))

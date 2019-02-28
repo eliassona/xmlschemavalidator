@@ -263,3 +263,68 @@
 				     </element>
            </schema>"))
 
+
+
+(deftest test-complex-content
+  (let [env (assoc predef-env "personinfo" (fn [value env] (if value [true [[true "Donald" :firstname][true "Duck" :lastname]]] [:sequence [:firstname :lastname]])))
+        schema (validation-fn-of "<extension base=\"personinfo\">
+			      <sequence>
+			        <element name=\"address\" type=\"string\"/>
+			        <element name=\"city\" type=\"string\"/>
+			        <element name=\"country\" type=\"string\"/>
+			      </sequence>
+			    </extension>")]
+    (is (= [:sequence [:firstname :lastname :address :city :country]] (schema nil env)))
+    (is (= [true [[true "Broadway" :address] [true "New" :city] [true "USA" :country] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+                 (parse-str  "<employee>
+                              <address>Broadway</address>
+                              <city>New York</city>
+                              <country>USA</country>
+                              <firstname>Donald</firstname>
+                              <lastname>Duck</lastname>
+                            </employee>")) env)))
+    
+    (is (= [true [[true "Broadway" :address] [true "LA" :city] [true "USA" :country] [true "Donald" :firstname] [true "Duck" :lastname]]] (schema (:content 
+                 (parse-str  "<employee>
+                              <address>Broadway</address>
+                              <city>LA</city>
+                              <country>USA</country>
+                              <firstname>Donald</firstname>
+                              <lastname>Duck</lastname>
+                            </employee>")) env)))
+    
+   
+  ))
+
+
+#_(deftest test-complex-content
+   (let [text "
+			<schema><complexType name=\"personinfo\">
+			  <sequence>
+			    <element name=\"firstname\" type=\"string\"/>
+			    <element name=\"lastname\" type=\"string\"/>
+			  </sequence>
+			</complexType>
+			
+			<complexType name=\"fullpersoninfo\">
+			  <complexContent>
+			    <extension base=\"personinfo\">
+			      <sequence>
+			        <element name=\"address\" type=\"string\"/>
+			        <element name=\"city\" type=\"string\"/>
+			        <element name=\"country\" type=\"string\"/>
+			      </sequence>
+			    </extension>
+			  </complexContent>
+			</complexType>
+			<element name=\"employee\" type=\"fullpersoninfo\"/>
+      </schema>"]
+     (is (= {} (decode text "<employee>
+                              <address>Broadway</address>
+                              <city>New York</city>
+                              <country>USA</country>
+                              <firstname>Donald</firstname>
+                              <lastname>Duck</lastname>
+                            </employee>")))
+     ))
+
