@@ -1,8 +1,10 @@
 # xmlschemavalidator
 
-A XML Schema decoder and validator
 
-## Usage
+A XML Schema decoder and validator. 
+Work in progress!!
+
+## Usage 
 
 ```clojure
 (ns example.core
