@@ -1,6 +1,6 @@
 (ns xmlschemavalidator.core
   (:use [clojure.pprint])
-  (:require [clojure.data.xml :refer [parse-str parse]])
+  (:require [clojure.data.xml :refer [parse-str parse sexp-as-element]])
   (:import [java.io ByteArrayInputStream InputStream]))
 
 (defmacro dbg [body]
@@ -85,7 +85,8 @@
    (condp = (.keySet attrs)
      #{:name :type}
      {(-> attrs :name keyword) (fn-of `(conj ~(element-of attrs content) ~(-> attrs :name keyword)))}
-     #{:name} (first content)
+     #{:name} 
+     {(-> attrs :name keyword) (fn-of `(conj ~(apply-of (first content)) ~(-> attrs :name keyword)))}
      #{:ref} content)
    {:kind :element}))
 
@@ -229,8 +230,21 @@
    }
   )
 
+(defprotocol IXmlParser
+  (parse-xml [o]))
+
+(extend-protocol IXmlParser
+  String
+  (parse-xml [s] (parse-str s))
+  clojure.lang.PersistentVector
+  (parse-xml [v] (sexp-as-element v))
+  clojure.data.xml.Element
+  (parse-xml [e] e) 
+  )
+
+
 (defn validation-expr-of [element]
-  (transform parse-map (parse-str element)))
+  (transform parse-map (parse-xml element)))
 
 (defn validation-fn-of [element]
   (eval (validation-expr-of element)))
@@ -244,10 +258,11 @@
       (apply merge (map map-of value)))
     value))
 
+
+
 (defn decode [schema value]
   (let [schema (validation-fn-of schema)]
-    (let [value (schema (parse-str value) predef-env)]
-      (map-of value))))
+    (-> value parse-xml (schema predef-env) map-of)))
 
 
 (defn valid? [value]

@@ -1,7 +1,7 @@
 (ns xmlschemavalidator.core-test
   (:use clojure.pprint)
   (:require [clojure.test :refer :all]
-            [clojure.data.xml :refer [parse-str parse]]
+            [clojure.data.xml :refer [parse-str parse sexp-as-element]]
             [xmlschemavalidator.lazymap :refer [lazy-map]]
             [xmlschemavalidator.core :refer :all]))
 
@@ -237,12 +237,12 @@
 		<element name=\"udr\" type=\"cp\">
 		  </element>
     </schema>"
-    value (decode schema "<udr><uniontest>0</uniontest></udr>")]
+    value (decode schema [:udr [:uniontest 0]])]
     (is (= {:udr {:uniontest 0}} value))
     (is (= {:udr true} (meta value)))
     (is (= false (valid? value)))
     (is (= {:uniontest false} (-> value :udr meta)))
-    (is (= {:uniontest true} (-> (decode schema "<udr><uniontest>36</uniontest></udr>") :udr meta)))
+    (is (= {:uniontest true} (-> (decode schema [:udr [:uniontest 36]]) :udr meta)))
     ))
 
 (deftest test-ref
@@ -363,4 +363,34 @@
          (is (= false (valid? res))))
        
        ))
+
+(deftest test-complex-inline
+  (let [schema  
+    [:schema 
+     [:element {:name "nameList"} 
+      [:complexType 
+       [:sequence 
+        [:element {:name "name" :type "string"}]]]]]] 
+    (is (= {:nameList {:name "anders"}} (decode schema [:nameList [:name "anders"]])))
+    (is (= true (valid? (decode schema [:nameList [:name "anders"]]))))
+  ))
+
+(deftest test-nested-complex-inline
+  (let [schema 
+        [:schema 
+         [:element {:name "part1"}
+          [:complexType
+           [:sequence
+            [:element {:name "nameList"}
+             [:complexType
+              [:sequence
+               [:element {:name "name" :type "string"}]]]]]]]]]
+    
+     (is (= {:part1 {:nameList {:name "asdf"}}} (decode schema [:part1 [:nameList [:name "asdf"]]])))
+     (is (= true (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
+     ))
+     
+  
+
+
 
