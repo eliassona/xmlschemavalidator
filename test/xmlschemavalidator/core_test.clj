@@ -384,10 +384,18 @@
             [:element {:name "nameList"}
              [:complexType
               [:sequence
-               [:element {:name "name" :type "string"}]]]]]]]]]
+               [:element {:name "name"}
+                [:simpleType
+                  [:union
+                   [:restriction {:base "string"}
+                    [:enumeration {:value "small"}]
+                    [:enumeration {:value "medium"}]
+                    [:enumeration {:value "large"}]]]]]]]]]]]]]
     
+     (is (= {:part1 {:nameList {:name "small"}}} (decode schema [:part1 [:nameList [:name "small"]]])))
+     (is (= true (valid? (decode schema [:part1 [:nameList [:name "small"]]]))))
      (is (= {:part1 {:nameList {:name "asdf"}}} (decode schema [:part1 [:nameList [:name "asdf"]]])))
-     (is (= true (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
+     (is (= false (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
      ))
      
   

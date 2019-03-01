@@ -101,7 +101,7 @@
     (fn-of 
       `~(add-try-catch 
           (concat
-            (member-types-of (:memberTypes attrs))
+            (member-types-of (if-let [mt (:memberTypes attrs)] mt ""))
             (anom-types-of content)))))
 
 (defn elem->name [e] (-> e :attrs :name keyword))
