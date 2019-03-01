@@ -77,10 +77,19 @@ Let's decode something that is valid
 true
 ```
 
+You could also use the sexp-as-element format instead of xml strings as arguments to decode.
+
+```clojure
+=> (valid? (d [:udr [:uniontest "medium"]]))
+true
+```
+
+
 ## The following tags are missing (and maybe more)
 * ref
 * simpleContext
 * attribute
+* attributeGroup
 
 
 ## License

@@ -20,16 +20,16 @@
        [(and (first t# ) ~expr) (second t#)])))
 
 (declare transform)
-(declare parse-node)
+(declare transform-element)
 
 (defn transform [the-map schema] 
   (cond
-    (map? schema) (parse-node the-map schema)
+    (map? schema) (transform-element the-map schema)
     (string? schema) schema
     :else
     (map (partial transform the-map) schema)))
 
-(defn parse-node [the-map element]
+(defn transform-element [the-map element]
   (if-let [f (the-map (:tag element))]
     (f (:attrs element) (transform the-map (:content element)))
     (assoc element :content (transform the-map (:content element)))))
