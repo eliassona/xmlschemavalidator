@@ -8,15 +8,15 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn fn-of [expr] `(fn [~'value ~'types] ~expr))
+(defn fn-of [expr] `(fn [~'value ~'types ~'attributes ~'elements] ~expr))
 
-(defn apply-of [expr] `(~expr ~'value ~'types))
+(defn apply-of [expr] `(~expr ~'value ~'types ~'attributes ~'elements))
 
 (defn delegate [attrs content] (fn-of (apply-of (first content))))
 
 (defmacro def-base [expr base]
   (fn-of 
-    `(let [t# ((~'types ~base) ~'value ~'types)]
+    `(let [t# ((~'types ~base) ~'value ~'types ~'attributes ~'elements)]
        [(and (first t# ) ~expr) (second t#)])))
 
 (declare transform)
@@ -37,7 +37,7 @@
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
     #{:name} (with-meta {(:name attrs) (fn-of (apply-of (first content)))} {:kind :type})
-    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'types ~(:type attrs) ~@content) ~'value ~'types))} {:kind :type})
+    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'types ~(:type attrs) ~@content) ~'value ~'types ~'attributes ~'elements))} {:kind :type})
     #{} (-> content first apply-of fn-of)))
     
 (defn parse-str-attr [op attrs _]
@@ -129,7 +129,7 @@
     (fn-of 
       `(let [~'types (merge ~(apply merge types) ~'types)
              elems# ~(apply merge elements)]
-         ((elems# (:tag ~'value)) (content-of ~'value) ~'types)))))
+         ((elems# (:tag ~'value)) (content-of ~'value) ~'types ~'attributes ~'elements)))))
 
 
 
@@ -139,7 +139,7 @@
        (if ~'value
          (if
            (= (keys ~'elem-map) (map :tag ~'value)) ;TODO order!
-           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types)) ~'value)]
+           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attributes ~'elements)) ~'value)]
            [false []])
          [:sequence (keys ~'elem-map)]))))
 
@@ -152,7 +152,7 @@
          (if
            (and (= (count ~'value) 1)
                 (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'types)]
+           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'types ~'attributes ~'elements)]
            [false []])
          [:choice (keys ~'elem-map)]))))
 
@@ -164,7 +164,7 @@
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
-          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types)) ~'value)]
+          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attributes ~'elements)) ~'value)]
           [false []])
         [:all (keys ~'elem-map)]))))
 
@@ -178,16 +178,16 @@
 (defn parse-extension [attrs content]
   (fn-of 
     `(let [base-fn# (~'types ~(-> attrs :base)) 
-           base# (base-fn# nil ~'types)
+           base# (base-fn# nil ~'types ~'attributes ~'elements)
            ext-fn# ~(first content)
-           ext# (ext-fn# nil ~'types)
+           ext# (ext-fn# nil ~'types ~'attributes ~'elements)
            ]
        (if 
          ~'value
          (if (= (first base#) (first ext#))
            (ext-and
-             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'types)
-             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'types))
+             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'types ~'attributes ~'elements)
+             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'types ~'attributes ~'elements))
            [false []])
          [(first base#) (concat (second base#) (second ext#))])
          )))
@@ -206,11 +206,11 @@
    :extension parse-extension
    :all parse-all})
 
-(def numeric? (fn [value _] [(number? value) value]))
+(def numeric? (fn [value _ _ _] [(number? value) value]))
 
 (def predef-types
   {
-   "string" (fn [value _] [(string? value) value])
+   "string" (fn [value _ _ _] [(string? value) value])
    "float" numeric?
    "double" numeric?
    "decimal" numeric?
@@ -262,7 +262,7 @@
 
 (defn decode [schema value]
   (let [schema (validation-fn-of schema)]
-    (-> value parse-xml (schema predef-types) map-of)))
+    (-> value parse-xml (schema predef-types {} {}) map-of)))
 
 
 (defn valid? [value]
