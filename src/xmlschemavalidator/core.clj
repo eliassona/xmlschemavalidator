@@ -8,15 +8,15 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn fn-of [expr] `(fn [~'value ~'env] ~expr))
+(defn fn-of [expr] `(fn [~'value ~'types] ~expr))
 
-(defn apply-of [expr] `(~expr ~'value ~'env))
+(defn apply-of [expr] `(~expr ~'value ~'types))
 
 (defn delegate [attrs content] (fn-of (apply-of (first content))))
 
 (defmacro def-base [expr base]
   (fn-of 
-    `(let [t# ((~'env ~base) ~'value ~'env)]
+    `(let [t# ((~'types ~base) ~'value ~'types)]
        [(and (first t# ) ~expr) (second t#)])))
 
 (declare transform)
@@ -37,7 +37,7 @@
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
     #{:name} (with-meta {(:name attrs) (fn-of (apply-of (first content)))} {:kind :type})
-    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'env ~(:type attrs) ~@content) ~'value ~'env))} {:kind :type})
+    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'types ~(:type attrs) ~@content) ~'value ~'types))} {:kind :type})
     #{} (-> content first apply-of fn-of)))
     
 (defn parse-str-attr [op attrs _]
@@ -78,7 +78,7 @@
     `(try (throw-if-false ~(first unions)) (catch Exception e# ~(add-try-catch (rest unions))))))
   
 (defn element-of [attrs content]
-  (apply-of `(~'env ~(:type attrs))))
+  (apply-of `(~'types ~(:type attrs))))
 
 (defn parse-element [attrs content]
  (with-meta 
@@ -91,7 +91,7 @@
    {:kind :element}))
 
 (defn member-types-of [member-types]
-  (map (fn [m] (apply-of `(~'env ~m))) (.split member-types " ")))
+  (map (fn [m] (apply-of `(~'types ~m))) (.split member-types " ")))
 
 (defn anom-types-of [types]
   (map apply-of types))
@@ -127,9 +127,9 @@
   (let [types (filter type? content)
         elements (filter element? content)]
     (fn-of 
-      `(let [~'env (merge ~(apply merge types) ~'env)
+      `(let [~'types (merge ~(apply merge types) ~'types)
              elems# ~(apply merge elements)]
-         ((elems# (:tag ~'value)) (content-of ~'value) ~'env)))))
+         ((elems# (:tag ~'value)) (content-of ~'value) ~'types)))))
 
 
 
@@ -139,7 +139,7 @@
        (if ~'value
          (if
            (= (keys ~'elem-map) (map :tag ~'value)) ;TODO order!
-           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
+           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types)) ~'value)]
            [false []])
          [:sequence (keys ~'elem-map)]))))
 
@@ -152,7 +152,7 @@
          (if
            (and (= (count ~'value) 1)
                 (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'env)]
+           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'types)]
            [false []])
          [:choice (keys ~'elem-map)]))))
 
@@ -164,7 +164,7 @@
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
-          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'env)) ~'value)]
+          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types)) ~'value)]
           [false []])
         [:all (keys ~'elem-map)]))))
 
@@ -177,17 +177,17 @@
 
 (defn parse-extension [attrs content]
   (fn-of 
-    `(let [base-fn# (~'env ~(-> attrs :base)) 
-           base# (base-fn# nil ~'env)
+    `(let [base-fn# (~'types ~(-> attrs :base)) 
+           base# (base-fn# nil ~'types)
            ext-fn# ~(first content)
-           ext# (ext-fn# nil ~'env)
+           ext# (ext-fn# nil ~'types)
            ]
        (if 
          ~'value
          (if (= (first base#) (first ext#))
            (ext-and
-             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'env)
-             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'env))
+             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'types)
+             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'types))
            [false []])
          [(first base#) (concat (second base#) (second ext#))])
          )))
@@ -208,7 +208,7 @@
 
 (def numeric? (fn [value _] [(number? value) value]))
 
-(def predef-env
+(def predef-types
   {
    "string" (fn [value _] [(string? value) value])
    "float" numeric?
@@ -262,7 +262,7 @@
 
 (defn decode [schema value]
   (let [schema (validation-fn-of schema)]
-    (-> value parse-xml (schema predef-env) map-of)))
+    (-> value parse-xml (schema predef-types) map-of)))
 
 
 (defn valid? [value]
