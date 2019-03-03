@@ -192,9 +192,18 @@
          [(first base#) (concat (second base#) (second ext#))])
          )))
   
+(defn parse-attribute [attrs _]
+    (if (contains? (.keySet attrs) :ref)
+      :ref
+      (let [n (-> attrs :name keyword)]
+        (with-meta {n (fn-of `(conj ~(apply-of `(~'types ~(:type attrs))) ~n))} {:kind :attribute}) 
+      )))
+
+
 
 (def parse-map 
   {:simpleType parse-simple-type
+   :attribute parse-attribute
    :restriction parse-restriction
    :union parse-union,
    :sequence parse-sequence

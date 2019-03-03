@@ -399,6 +399,15 @@
      ))
      
   
-
+(deftest test-attributes
+  #_(let [schema
+         [:schema 
+          [:element {:name "part1"}
+           [:complexType
+            [:attribute {:name "attr1" :type "integer"}]
+            [:attribute {:name "attr2" :type "string"}]]]]]
+    
+     (is (= [:part1 {:attr1 2, :attr2 "hej"}] (decode schema [:part1 {:attr1 2, :attr2 "hej"}])))
+     ))
 
 
