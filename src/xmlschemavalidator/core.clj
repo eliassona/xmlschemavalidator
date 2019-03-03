@@ -84,9 +84,11 @@
  (with-meta 
    (condp = (.keySet attrs)
      #{:name :type}
-     {(-> attrs :name keyword) (fn-of `(conj ~(element-of attrs content) ~(-> attrs :name keyword)))}
+     (let [n (-> attrs :name keyword)]
+       {n (fn-of `(conj ~(element-of attrs content) ~n))})
      #{:name} 
-     {(-> attrs :name keyword) (fn-of `(conj ~(apply-of (first content)) ~(-> attrs :name keyword)))}
+     (let [n (-> attrs :name keyword)]
+       {n (fn-of `(conj ~(apply-of (first content)) ~n))})
      #{:ref} content)
    {:kind :element}))
 
