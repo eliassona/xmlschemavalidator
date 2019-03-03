@@ -254,9 +254,9 @@
     (coll? value)
     (if (instance? Boolean (first value))
       (let [tag (nth value 2)]
-        (with-meta {tag (map-of (second value))} {tag (first value)}))
-      (apply merge (map map-of value)))
-    value))
+        (with-meta (cons tag (map-of (second value))) {tag (first value)}))
+      (map map-of value))
+    [value]))
 
 
 
@@ -267,7 +267,9 @@
 
 (defn valid? [value]
   (letfn [(valid?-fn [value] 
-            (concat (vals (meta value)) (mapcat valid?-fn (filter map? (vals value)))))]
-    (every? identity (valid?-fn value))
-  ))
+            (let [n (rest value)
+                  m (vals (meta value))]
+                (concat m (map valid?-fn (filter coll? n)))))]
+     (every? identity (flatten (valid?-fn value))))
+  )
 

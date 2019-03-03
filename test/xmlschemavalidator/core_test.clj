@@ -238,11 +238,11 @@
 		  </element>
     </schema>"
     value (decode schema [:udr [:uniontest 0]])]
-    (is (= {:udr {:uniontest 0}} value))
+    (is (= [:udr [:uniontest 0]] value))
     (is (= {:udr true} (meta value)))
     (is (= false (valid? value)))
-    (is (= {:uniontest false} (-> value :udr meta)))
-    (is (= {:uniontest true} (-> (decode schema [:udr [:uniontest 36]]) :udr meta)))
+    (is (= {:uniontest false} (-> value second meta)))
+    (is (= {:uniontest true} (-> (decode schema [:udr [:uniontest 36]]) second meta)))
     ))
 
 (deftest test-ref
@@ -350,7 +350,7 @@
                           <firstname>Donald</firstname>
                           <lastname>Duck</lastname>
                         </employee>")]
-         (is (= {:employee {:address "Broadway", :city "New", :country "USA", :firstname "Donald", :lastname "Duck"}} res))
+         (is (= [:employee [:address "Broadway"], [:city "New"], [:country "USA"], [:firstname "Donald"], [:lastname "Duck"]] res))
          (is (= true (-> res meta :employee))))
        (let [res (decode text "<employee>
                           <city>New York</city>
@@ -358,7 +358,7 @@
                           <firstname>Donald</firstname>
                           <lastname>Duck</lastname>
                         </employee>")]
-         (is (= {:employee {:firstname "Donald", :lastname "Duck"}} res))
+         (is (= [:employee [:firstname "Donald"], [:lastname "Duck"]] res))
          (is (= false (-> res meta :employee)))
          (is (= false (valid? res))))
        
@@ -371,7 +371,7 @@
       [:complexType 
        [:sequence 
         [:element {:name "name" :type "string"}]]]]]] 
-    (is (= {:nameList {:name "anders"}} (decode schema [:nameList [:name "anders"]])))
+    (is (= [:nameList [:name "anders"]] (decode schema [:nameList [:name "anders"]])))
     (is (= true (valid? (decode schema [:nameList [:name "anders"]]))))
   ))
 
@@ -392,9 +392,9 @@
                     [:enumeration {:value "medium"}]
                     [:enumeration {:value "large"}]]]]]]]]]]]]]
     
-     (is (= {:part1 {:nameList {:name "small"}}} (decode schema [:part1 [:nameList [:name "small"]]])))
+     (is (= [:part1 [:nameList [:name "small"]]] (decode schema [:part1 [:nameList [:name "small"]]])))
      (is (= true (valid? (decode schema [:part1 [:nameList [:name "small"]]]))))
-     (is (= {:part1 {:nameList {:name "asdf"}}} (decode schema [:part1 [:nameList [:name "asdf"]]])))
+     (is (= [:part1 [:nameList [:name "asdf"]]] (decode schema [:part1 [:nameList [:name "asdf"]]])))
      (is (= false (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
      ))
      
