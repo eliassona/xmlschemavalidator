@@ -8,15 +8,15 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn fn-of [expr] `(fn [~'value ~'types ~'attributes ~'elements] ~expr))
+(defn fn-of [expr] `(fn [~'value ~'types ~'attr-groups ~'elements] ~expr))
 
-(defn apply-of [expr] `(~expr ~'value ~'types ~'attributes ~'elements))
+(defn apply-of [expr] `(~expr ~'value ~'types ~'attr-groups ~'elements))
 
 (defn delegate [attrs content] (fn-of (apply-of (first content))))
 
 (defmacro def-base [expr base]
   (fn-of 
-    `(let [t# ((~'types ~base) ~'value ~'types ~'attributes ~'elements)]
+    `(let [t# ((~'types ~base) ~'value ~'types ~'attr-groups ~'elements)]
        [(and (first t# ) ~expr) (second t#)])))
 
 (declare transform)
@@ -37,7 +37,7 @@
 (defn parse-simple-type [attrs content]
   (condp = (.keySet attrs)
     #{:name} (with-meta {(:name attrs) (fn-of (apply-of (first content)))} {:kind :type})
-    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'types ~(:type attrs) ~@content) ~'value ~'types ~'attributes ~'elements))} {:kind :type})
+    #{:name :type} (with-meta {(:name attrs) (fn-of `((~'types ~(:type attrs) ~@content) ~'value ~'types ~'attr-groups ~'elements))} {:kind :type})
     #{} (-> content first apply-of fn-of)))
     
 (defn parse-str-attr [op attrs _]
@@ -129,7 +129,7 @@
     (fn-of 
       `(let [~'types (merge ~(apply merge types) ~'types)
              elems# ~(apply merge elements)]
-         ((elems# (:tag ~'value)) (content-of ~'value) ~'types ~'attributes ~'elements)))))
+         ((elems# (:tag ~'value)) (content-of ~'value) ~'types ~'attr-groups ~'elements)))))
 
 
 
@@ -139,7 +139,7 @@
        (if ~'value
          (if
            (= (keys ~'elem-map) (map :tag ~'value)) ;TODO order!
-           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attributes ~'elements)) ~'value)]
+           [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attr-groups ~'elements)) ~'value)]
            [false []])
          [:sequence (keys ~'elem-map)]))))
 
@@ -152,7 +152,7 @@
          (if
            (and (= (count ~'value) 1)
                 (contains? (.keySet ~'elem-map) (-> ~'value first :tag)))
-           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'types ~'attributes ~'elements)]
+           [true ((~'elem-map (-> ~'value first :tag)) (content-of (first ~'value)) ~'types ~'attr-groups ~'elements)]
            [false []])
          [:choice (keys ~'elem-map)]))))
 
@@ -164,7 +164,7 @@
           (and 
             (= (count ~'elem-map) (count ~'value))
             (= (.keySet ~'elem-map) (set (map :tag ~'value))))
-          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attributes ~'elements)) ~'value)]
+          [true (map (fn [v#] ((~'elem-map (:tag v#)) (content-of v#) ~'types ~'attr-groups ~'elements)) ~'value)]
           [false []])
         [:all (keys ~'elem-map)]))))
 
@@ -178,16 +178,16 @@
 (defn parse-extension [attrs content]
   (fn-of 
     `(let [base-fn# (~'types ~(-> attrs :base)) 
-           base# (base-fn# nil ~'types ~'attributes ~'elements)
+           base# (base-fn# nil ~'types ~'attr-groups ~'elements)
            ext-fn# ~(first content)
-           ext# (ext-fn# nil ~'types ~'attributes ~'elements)
+           ext# (ext-fn# nil ~'types ~'attr-groups ~'elements)
            ]
        (if 
          ~'value
          (if (= (first base#) (first ext#))
            (ext-and
-             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'types ~'attributes ~'elements)
-             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'types ~'attributes ~'elements))
+             (ext-fn# (remove-values-not-in-coll ~'value (second ext#)) ~'types ~'attr-groups ~'elements)
+             (base-fn# (remove-values-not-in-coll ~'value (second base#)) ~'types ~'attr-groups ~'elements))
            [false []])
          [(first base#) (concat (second base#) (second ext#))])
          )))
