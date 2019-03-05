@@ -86,7 +86,7 @@
    </schema>"
    ]
    
-   #_[:SCHEMA 
+   [:SCHEMA 
  "<schema>
    <attribute name=\"code\">
    <simpleType>
