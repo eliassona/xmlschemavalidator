@@ -83,8 +83,23 @@
     <complexType name=\"person\">
       <attributeGroup ref=\"personattr\"/>
     </complexType>
-   </schema>
-"]
+   </schema>"
+   ]
+   
+   #_[:SCHEMA 
+ "<schema>
+   <attribute name=\"code\">
+   <simpleType>
+    <restriction base=\"string\">
+      <pattern value=\"[A-Z][A-Z]\"/>
+    </restriction>
+   </simpleType>
+   </attribute>
+
+   <complexType name=\"someComplexType\">
+     <attribute ref=\"code\"/>
+   </complexType>
+ </schema>"]
    
    
   ))
