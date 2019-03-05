@@ -19,81 +19,13 @@
     node))
 
 
-(def schema
-  (-> "<schema>
-    <simpleType name=\"stringenum\">
-      <restriction base=\"string\">
-        <enumeration value=\"small\"/>
-        <enumeration value=\"medium\"/>
-        <enumeration value=\"large\"/>
-      </restriction>
-    </simpleType>
-		<simpleType name =\"intrange\">
-		   <restriction base=\"integer\">
-	        <minInclusive value=\"36\"/>
-	        <maxInclusive value=\"42\"/>
-	     </restriction>
-		 </simpleType>
-		 <simpleType name =\"theunion\">
-		   <union memberTypes=\"stringenum intrange\"/>
-		 </simpleType>
-     <complexType name=\"cp\">
-       <sequence>
-         <element name=\"uniontest\" type=\"theunion\"/>
-       </sequence>
-     </complexType>
-		<element name=\"udr\" type=\"cp\">
-		  </element>
-    </schema>" parse-str element->hiccup))
-
-
-
-(def complex-type
-  (-> "
- <element name=\"note\">
-  <complexType>
-    <sequence>
-		  <element name=\"to\" type=\"string\"/>
-		  <element name=\"from\" type=\"string\"/>
-		  <element name=\"heading\" type=\"string\"/>
-		  <element name=\"body\" type=\"string\"/>
-    </sequence>
-  </complexType>
-  </element>
-"
-  parse-str element->hiccup))
-
-(def complex-content
-	(-> "<complexType name=\"fullpersoninfo\">
-	  <complexContent>
-	    <extension base=\"personinfo\">
-	      <sequence>
-	        <element name=\"address\" type=\"string\"/>
-	        <element name=\"city\" type=\"string\"/>
-	        <element name=\"country\" type=\"string\"/>
-	      </sequence>
-	    </extension>
-	  </complexContent>
-	</complexType>" parse-str element->hiccup))
-
-
-(def simple-content
-(-> "<element name=\"shoesize\">
-  <complexType>
-    <simpleContent>
-      <extension base=\"integer\">
-        <attribute name=\"country\" type=\"string\" />
-      </extension>
-    </simpleContent>
-  </complexType>
-</element>" parse-str element->hiccup))
 
 
 (def parser 
   (insta/parser "
                  SCHEMA = OPEN-PAREN ':schema' SPACE TYPES CLOSE-PAREN
                  TYPES = ((TYPE OPTIONAL-SPACE)* | TYPE)
-                 TYPE = (SIMPLETYPE | COMPLEXTYPE | ELEMENT)
+                 TYPE = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP)
                  ELEMENT = OPEN-PAREN ':element' SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
                  COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
                  COMPLEXTYPE-BODY = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) ATTRIBUTES
@@ -102,9 +34,9 @@
                  COMPLEXCONTENT = OPEN-PAREN ':complexContent' SPACE EXTENSION CLOSE-PAREN
                  CONTENT = SIMPLECONTENT | COMPLEXCONTENT
                  EXTENSION = OPEN-PAREN ':extension' SPACE BASE-ATTR SPACE (COLLECTION | ATTRIBUTE) CLOSE-PAREN
-                 ATTRIBUTE-GROUP = OPEN-PAREN ':attributeGroup' SPACE ((NAME-ATTR SPACE ATTRIBUTE-GROUP-BODY) | REF-ATTR) CLOSE-PAREN
-                 ATTRIBUTE-GROUP-BODY = [ANNOTATION] ATTRIBUTES
-                 ATTRIBUTES = ((ATTRIBUTE SPACE)* | ATTRIBUTE)
+                 ATTRIBUTEGROUP = OPEN-PAREN ':attributeGroup' SPACE ((NAME-ATTR SPACE ATTRIBUTEGROUP-BODY) | REF-ATTR) CLOSE-PAREN
+                 ATTRIBUTEGROUP-BODY = [ANNOTATION] ATTRIBUTES
+                 ATTRIBUTES = (((ATTRIBUTE | ATTRIBUTEGROUP) OPTIONAL-SPACE)* | (ATTRIBUTE | ATTRIBUTEGROUP))
                  ATTRIBUTE = OPEN-PAREN ':attribute' SPACE ATTRIBUTE-ATTRS CLOSE-PAREN
                  ATTRIBUTE-ATTRS = OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET
                  GROUP = OPEN-PAREN ':group' SPACE ELEMENTS CLOSE-PAREN
@@ -140,4 +72,12 @@
 "))
 
 
+(defprotocol IParser
+  (xml-parse [o]))
+
+(extend-protocol IParser
+  String
+  (xml-parse [xml-syntax] (xml-parse (parse-str xml-syntax)))
+  clojure.data.xml.Element
+  (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
 
