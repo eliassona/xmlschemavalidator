@@ -48,19 +48,39 @@
 
 
 
+(def complex-type
+  (-> "
+ <element name=\"note\">
+  <complexType>
+    <sequence>
+		  <element name=\"to\" type=\"string\"/>
+		  <element name=\"from\" type=\"string\"/>
+		  <element name=\"heading\" type=\"string\"/>
+		  <element name=\"body\" type=\"string\"/>
+    </sequence>
+  </complexType>
+  </element>
+"
+  parse-str element->hiccup))
+
 
 (def parser 
   (insta/parser "
                  SCHEMA = OPEN-PAREN ':schema' SPACE ((TYPES OPTIONAL-SPACE)* | TYPES) CLOSE-PAREN
                  TYPES = (SIMPLETYPE | COMPLEXTYPE | ELEMENT)
-                 ELEMENT = OPEN-PAREN ':element' SPACE NAME-TYPE-ATTR CLOSE-PAREN
-                 COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE NAME-ATTR SPACE COMPLEXTYPE-BODY CLOSE-PAREN
-                 COMPLEXTYPE-BODY = SEQUENCE | ALL | GROUP | CHOICE
+                 ELEMENT = OPEN-PAREN ':element' SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPES)) CLOSE-PAREN
+                 COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
+                 COMPLEXTYPE-BODY = [ANNOTATION] [SEQUENCE | ALL | GROUP | CHOICE] ((ATTRIBUTE SPACE)* | ATTRIBUTE)
+                 ATTRIBUTE-GROUP = OPEN-PAREN ':attributeGroup' SPACE ((NAME-ATTR SPACE ATTRIBUTE-GROUP-BODY) | REF-ATTR) CLOSE-PAREN
+                 ATTRIBUTE-GROUP-BODY = [ANNOTATION] (ATTRIBUTE SPACE)* | ATTRIBUTE
+                 ATTRIBUTE = OPEN-PAREN ':attribute' SPACE ATTRIBUTE-ATTRS CLOSE-PAREN
+                 ATTRIBUTE-ATTRS = OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET
                  GROUP = OPEN-PAREN ':group' SPACE ELEMENT* CLOSE-PAREN
                  ALL = OPEN-PAREN ':all' SPACE ELEMENT* CLOSE-PAREN
                  CHOICE = OPEN-PAREN ':choice' SPACE ELEMENT* CLOSE-PAREN
-                 SEQUENCE = OPEN-PAREN ':sequence' SPACE ELEMENT* CLOSE-PAREN
+                 SEQUENCE = OPEN-PAREN ':sequence' SPACE ((ELEMENT OPTIONAL-SPACE)* | ELEMENT) CLOSE-PAREN
                  SIMPLETYPE = (OPEN-PAREN ':simpleType' (SIMPLETYPE-BODY | (SPACE  (NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
+                 REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
                  NAME-ATTR = OPEN-BRACKET ':name' SPACE SYMBOL CLOSE-BRACKET
                  NAME-TYPE-ATTR = OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL CLOSE-BRACKET
                  SIMPLETYPE-BODY = [ANNOTATION] (UNION | RESTRICTION)
