@@ -1,7 +1,7 @@
 (ns xmlschemavalidator.parser
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
-            [xmlschemavalidator.core :refer [fn-of apply-of predef-types]]
+            [xmlschemavalidator.core :refer [fn-of apply-of predef-types add-try-catch to-str]]
             [clojure.data.xml :refer [parse-str]]))
 
 
@@ -18,9 +18,6 @@
     (map element->hiccup node)
     :else
     node))
-
-
-
 
 (def parser 
   (insta/parser "
@@ -55,13 +52,13 @@
                  SEQUENCE = OPEN-PAREN ':sequence' SPACE ELEMENTS CLOSE-PAREN
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
                  SIMPLETYPES = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
-                 SIMPLETYPE = (OPEN-PAREN ':simpleType' SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
+                 SIMPLETYPE = (OPEN-PAREN <':simpleType'> SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
                  REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
-                 NAME-ATTR = OPEN-BRACKET ':name' SPACE SYMBOL CLOSE-BRACKET
+                 <NAME-ATTR> = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
                  NAME-TYPE-ATTR = OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL CLOSE-BRACKET
-                 SIMPLETYPE-BODY = [ANNOTATION] (LIST | UNION | RESTRICTION)
-                 LIST = OPEN-PAREN ':list' SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
-                 UNION = OPEN-PAREN ':union' [SPACE OPEN-BRACKET ':memberTypes' SPACE MEMBERTYPES CLOSE-BRACKET] SIMPLETYPES CLOSE-PAREN
+                 <SIMPLETYPE-BODY> = [ANNOTATION] (LIST | UNION | RESTRICTION)
+                 LIST = OPEN-PAREN <':list'> SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
+                 UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> SPACE MEMBERTYPES CLOSE-BRACKET] SIMPLETYPES CLOSE-PAREN
                  MEMBERTYPES = <'\"'> (NAME SPACE)* NAME <'\"'> 
                  ANNOTATION = OPEN-PAREN CLOSE-PAREN
                  
@@ -92,11 +89,17 @@
   clojure.data.xml.Element
   (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
 
+(defn math-expr-of [op value]
+  (fn-of `(~op ~'value ~value)))
 
-(defn restrction->clj [tag value]
+(defn restriction->clj [tag value]
     (condp = tag
      :enumeration
      (with-meta (fn-of `(= ~value ~'value)) {:kind :enumeration})
+     :minInclusive
+     (math-expr-of `>= value)
+     :maxInclusive
+     (math-expr-of `<= value)
      ))
 
 (defn enumeration? [args]
@@ -104,17 +107,30 @@
 
 (defn restrictions->clj [& args]
   (fn-of
-    `(~(if (enumeration? args) `or `and) ~@(map apply-of args))))
+    `[(~(if (enumeration? args) `or `and) ~@(map apply-of args)) ~'value]))
 
+(defn simple-type->clj
+  ([name the-fn]
+    {name the-fn}))
+
+(defn member-types->clj [& args]
+  (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))
+
+(defn union->clj [& fns]
+  (add-try-catch fns)
+  )
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
    :NAME (fn [& args] (apply str args))
-   :STRING identity
+   :STRING #(-> % read-string to-str)
    :RESTRICTION-KWS identity
-   :RESTRICTION-BODY (fn [tag value] (restrction->clj (read-string tag) value))
+   :RESTRICTION-BODY (fn [tag value] (restriction->clj (read-string tag) value))
    :RESTRICTION_BODIES restrictions->clj 
    :BASE-ATTR (fn [base] (fn-of (apply-of `(~'types ~base))))
    :RESTRICTION (fn [base restriction] (fn-of `(and ~(apply-of base) ~(apply-of restriction))))
+   :SIMPLETYPE simple-type->clj
+   :MEMBERTYPES member-types->clj
+   :UNION union->clj
   ; :OPEN-BRACKET (fn [& args] (map read-string args))
    }
   )
@@ -122,3 +138,16 @@
 (defn ast->clj [ast]
   (insta/transform ast->clj-map ast))
 
+
+(defn validation-expr-of 
+  ([schema start]
+  (-> schema xml-parse (parser :start start) ast->clj))
+  ([schema]
+    (validation-expr-of schema :SCHEMA)))
+
+(defn validation-fn-of 
+  ([schema start]
+    (eval (validation-expr-of schema start)))
+  ([schema]
+    (eval (validation-expr-of schema))))
+    

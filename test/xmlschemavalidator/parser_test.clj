@@ -1,7 +1,9 @@
 (ns xmlschemavalidator.parser_test
+  (:use [clojure.pprint])
   (:require [clojure.test :refer :all]
             [instaparse.core :as insta]
             [clojure.data.xml :refer [parse-str parse sexp-as-element]]
+            [xmlschemavalidator.core :refer [predef-types]]
             [xmlschemavalidator.parser :refer :all]))
 
 
@@ -101,7 +103,7 @@
    </complexType>
  </schema>"]
    
-   [:SCHEMA "
+   #_[:SCHEMA "
     <schema>
 			<group name=\"custGroup\">
 			  <sequence>
@@ -119,7 +121,58 @@
 			</complexType>
 -->			
   </schema>"]
+   [:UNION
+     "<union>
+            <simpleType>
+                <restriction base=\"positiveInteger\">
+                    <enumeration value=\"20\"/>
+                    <enumeration value=\"30\"/>
+                    <enumeration value=\"40\"/>
+                </restriction>
+            </simpleType>
+            <simpleType>
+                <restriction base=\"positiveInteger\">
+                    <minInclusive value=\"2\"/>
+                    <maxInclusive value=\"18\"/>
+                </restriction>
+            </simpleType>
+            <simpleType>
+                <restriction base=\"string\">
+                    <enumeration value=\"small\"/>
+                    <enumeration value=\"medium\"/>
+                    <enumeration value=\"large\"/>
+                </restriction>
+            </simpleType>
+            <simpleType>
+                <restriction base=\"string\">
+                    <enumeration value=\"S\"/>
+                    <enumeration value=\"M\"/>
+                    <enumeration value=\"L\"/>
+                </restriction>
+            </simpleType>
+        </union>"]   
    
-   
-   
+  ))
+
+
+(deftest test-enum-restriction
+  (let [f (validation-fn-of "<restriction base=\"string\">
+		        <enumeration value=\"small\"/>
+		        <enumeration value=\"medium\"/>
+		        <enumeration value=\"large\"/>
+		      </restriction>" :RESTRICTION)]
+	  (is (= [true "small"] (f "small" predef-types {} {})))
+	  (is (= [true "medium"] (f "medium" predef-types {} {})))
+	  (is (= [true "large"] (f "large" predef-types {} {})))
+	  (is (= [false "asdf"] (f "asdf" predef-types {} {})))
+  ))
+
+(deftest test-range-restriction
+  (let [f (validation-fn-of "<restriction base=\"integer\">
+		        <minInclusive value=\"36\"/>
+		        <maxInclusive value=\"42\"/>
+		      </restriction>" :RESTRICTION)]
+	  (is (= [true 36] (f 36 predef-types {} {})))
+	  (is (= [true 42] (f 42 predef-types {} {})))
+	  (is (= [false 43] (f 43 predef-types {} {})))
   ))
