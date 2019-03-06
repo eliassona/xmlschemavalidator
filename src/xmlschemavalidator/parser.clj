@@ -1,6 +1,7 @@
 (ns xmlschemavalidator.parser
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
+            [xmlschemavalidator.core :refer [fn-of apply-of predef-types]]
             [clojure.data.xml :refer [parse-str]]))
 
 
@@ -47,7 +48,8 @@
                  ATTRIBUTE-ATTRS = ATTRIBUTE-NAME-TYPE | ATTRIBUTE-NAME-ONLY | REF-ATTR
                  ATTRIBUTE-NAME-ONLY = NAME-ATTR SPACE SIMPLETYPE
                  ATTRIBUTE-NAME-TYPE = (OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET)
-                 GROUP = OPEN-PAREN ':group' SPACE ELEMENTS CLOSE-PAREN
+                 GROUP = OPEN-PAREN ':group' SPACE (NAME-ATTR SPACE GROUP-BODY) | REF-ATTR | GROUP-BODY CLOSE-PAREN
+                 GROUP-BODY = [ANNOTATION] [SEQUENCE | ALL | CHOICE]
                  ALL = OPEN-PAREN ':all' SPACE ELEMENTS CLOSE-PAREN
                  CHOICE = OPEN-PAREN ':choice' SPACE ELEMENTS CLOSE-PAREN
                  SEQUENCE = OPEN-PAREN ':sequence' SPACE ELEMENTS CLOSE-PAREN
@@ -63,19 +65,19 @@
                  MEMBERTYPES = <'\"'> (NAME SPACE)* NAME <'\"'> 
                  ANNOTATION = OPEN-PAREN CLOSE-PAREN
                  
-                 RESTRICTION = OPEN-PAREN ':restriction' SPACE BASE-ATTR SPACE RESTRICTION_BODIES CLOSE-PAREN
-                 BASE-ATTR = OPEN-BRACKET ':base' SPACE SYMBOL CLOSE-BRACKET
+                 RESTRICTION = OPEN-PAREN <':restriction'> SPACE BASE-ATTR SPACE RESTRICTION_BODIES CLOSE-PAREN
+                 BASE-ATTR = OPEN-BRACKET <':base'> SPACE SYMBOL CLOSE-BRACKET
                  RESTRICTION_BODIES = ((RESTRICTION-BODY SPACE)* RESTRICTION-BODY)
-                 RESTRICTION-BODY = OPEN-PAREN RESTRICTION-KWS SPACE OPEN-BRACKET ':value' SPACE STRING CLOSE-BRACKET CLOSE-PAREN
+                 RESTRICTION-BODY = OPEN-PAREN RESTRICTION-KWS SPACE OPEN-BRACKET <':value'> SPACE STRING CLOSE-BRACKET CLOSE-PAREN
                  RESTRICTION-KWS = ':enumeration' | ':minInclusive' | ':maxInclusive' | ':minExclusive' | ':maxExclusive' | ':pattern'
-                 OPEN-PAREN = <'('>
-                 CLOSE-PAREN = <')'>
-                 OPEN-BRACKET = <'{'>
-                 CLOSE-BRACKET = <'}'>
-						     SYMBOL = <'\"'> #'[a-zA-Z_]'  #'\\w'* <'\"'>
+                 <OPEN-PAREN> = <'('>
+                 <CLOSE-PAREN> = <')'>
+                 <OPEN-BRACKET> = <'{'>
+                 <CLOSE-BRACKET> = <'}'>
+                 SYMBOL = <'\"'> #'[a-zA-Z_]'  #'\\w'* <'\"'>
                  NAME = #'[a-zA-Z_]'  #'\\w'*
                  STRING = <'\\\"'> #'([^\"\\\\]|\\\\.)*' <'\\\"'>
-						     <SPACE> = <#'[ \t\n,]+'>
+                 <SPACE> = <#'[ \t\n,]+'>
                  <OPTIONAL-SPACE> = <#'[ \t\n]*'>
 
 "))
@@ -89,4 +91,34 @@
   (xml-parse [xml-syntax] (xml-parse (parse-str xml-syntax)))
   clojure.data.xml.Element
   (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
+
+
+(defn restrction->clj [tag value]
+    (condp = tag
+     :enumeration
+     (with-meta (fn-of `(= ~value ~'value)) {:kind :enumeration})
+     ))
+
+(defn enumeration? [args]
+  (every? #(= (-> % meta :kind) :enumeration) args))
+
+(defn restrictions->clj [& args]
+  (fn-of
+    `(~(if (enumeration? args) `or `and) ~@(map apply-of args))))
+
+(def ast->clj-map
+  {:SYMBOL (fn [& args] (apply str args))
+   :NAME (fn [& args] (apply str args))
+   :STRING identity
+   :RESTRICTION-KWS identity
+   :RESTRICTION-BODY (fn [tag value] (restrction->clj (read-string tag) value))
+   :RESTRICTION_BODIES restrictions->clj 
+   :BASE-ATTR (fn [base] (fn-of (apply-of `(~'types ~base))))
+   :RESTRICTION (fn [base restriction] (fn-of `(and ~(apply-of base) ~(apply-of restriction))))
+  ; :OPEN-BRACKET (fn [& args] (map read-string args))
+   }
+  )
+
+(defn ast->clj [ast]
+  (insta/transform ast->clj-map ast))
 

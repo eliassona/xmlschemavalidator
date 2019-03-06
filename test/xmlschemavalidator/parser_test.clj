@@ -101,5 +101,25 @@
    </complexType>
  </schema>"]
    
+   [:SCHEMA "
+    <schema>
+			<group name=\"custGroup\">
+			  <sequence>
+			    <element name=\"customer\" type=\"string\"/>
+			    <element name=\"orderdetails\" type=\"string\"/>
+			    <element name=\"billto\" type=\"string\"/>
+			    <element name=\"shipto\" type=\"string\"/>
+			  </sequence>
+			</group>
+<!--			
+			<element name=\"order\" type=\"ordertype\"/>
+			<complexType name=\"ordertype\">
+			  <group ref=\"custGroup\"/>
+			  <attribute name=\"status\" type=\"string\"/>
+			</complexType>
+-->			
+  </schema>"]
+   
+   
    
   ))
