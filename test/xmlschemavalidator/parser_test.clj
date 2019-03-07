@@ -176,3 +176,47 @@
 	  (is (= [true 42] (f 42 predef-types {} {})))
 	  (is (= [false 43] (f 43 predef-types {} {})))
   ))
+
+(deftest test-anon-simple-type
+  (let [f (validation-fn-of 
+            "<simpleType>
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>" :SIMPLETYPE)]
+    
+    (is (= [true 36] (f 36 predef-types {} {})))
+    (is (= [false 43] (f 43 predef-types {} {})))))
+
+(deftest test-simple-type-def
+  (let [e (validation-expr-of 
+            "<simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>" :SIMPLETYPE)]
+    (is (= :type (-> e meta :kind)))
+    (is (= [false 0] ((eval (first (vals e))) 0 predef-types {} {})))
+    (is (= [true 36] ((eval (first (vals e))) 36 predef-types {} {})))
+    ))
+
+(deftest test-simple-type-reffing-predef
+  (let [e (validation-expr-of 
+            "<simpleType name=\"aname\" type=\"byte\">
+             </simpleType>" :SIMPLETYPE)]
+    (is (= :type (-> e meta :kind)))
+    (is (= [true 0] ((eval (first (vals e))) 0 predef-types {} {})))
+    (is (= [true 127] ((eval (first (vals e))) 127 predef-types {} {})))
+    (is (= [false 128] ((eval (first (vals e))) 128 predef-types {} {})))
+    
+    ))
+(deftest test-element
+  (let [text "<element name=\"abyte\" type=\"byte\"/>"
+        f (validation-fn-of text :ELEMENT)]
+    (is (= :element (-> (validation-expr-of text :ELEMENT) meta :kind)))
+    (is (= [true 0 :abyte] ((f :abyte) 0 predef-types {} {})))
+    (is (= [true 127 :abyte] ((f :abyte) 127 predef-types {} {})))
+    (is (= [false 128 :abyte] ((f :abyte) 128 predef-types {} {})))
+  ))

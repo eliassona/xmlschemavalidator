@@ -1,7 +1,7 @@
 (ns xmlschemavalidator.parser
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
-            [xmlschemavalidator.core :refer [fn-of apply-of predef-types add-try-catch to-str]]
+            [xmlschemavalidator.core :refer [dbg fn-of apply-of predef-types add-try-catch to-str]]
             [clojure.data.xml :refer [parse-str]]))
 
 
@@ -29,7 +29,7 @@
                  NOTATION = OPEN-PAREN ':notation' SPACE OPEN-BRACKET NAME-ATTR <','> SPACE ':public' SPACE STRING CLOSE-BRACKET CLOSE-PAREN
                  TYPES = ((TYPE OPTIONAL-SPACE)* | TYPE)
                  TYPE = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP | ATTRIBUTE)
-                 ELEMENT = OPEN-PAREN ':element' SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
+                 ELEMENT = OPEN-PAREN <':element'> SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
                  COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
                  COMPLEXTYPE-BODY = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) ATTRIBUTES
                  COLLECTION = SEQUENCE | ALL | GROUP | CHOICE
@@ -54,8 +54,8 @@
                  SIMPLETYPES = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
                  SIMPLETYPE = (OPEN-PAREN <':simpleType'> SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
                  REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
-                 <NAME-ATTR> = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
-                 NAME-TYPE-ATTR = OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL CLOSE-BRACKET
+                 NAME-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
+                 NAME-TYPE-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL CLOSE-BRACKET
                  <SIMPLETYPE-BODY> = [ANNOTATION] (LIST | UNION | RESTRICTION)
                  LIST = OPEN-PAREN <':list'> SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
                  UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> SPACE MEMBERTYPES CLOSE-BRACKET] SIMPLETYPES CLOSE-PAREN
@@ -90,7 +90,7 @@
   (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
 
 (defn math-expr-of [op value]
-  (fn-of `(~op ~'value ~value)))
+  (with-meta (fn-of `(~op ~'value ~value)) {:kind :range}))
 
 (defn restriction->clj [tag value]
     (condp = tag
@@ -111,7 +111,10 @@
 
 (defn simple-type->clj
   ([name the-fn]
-    {name the-fn}))
+    (with-meta {name the-fn} {:kind :type}))
+  ([m] 
+    (let [name (-> m meta :name)]
+      (vary-meta m assoc :kind :type))))
 
 (defn member-types->clj [& args]
   (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))
@@ -119,9 +122,19 @@
 (defn union->clj [& fns]
   (add-try-catch fns)
   )
+
+(defn name-type->clj [name type]
+  (let [name (keyword name)]
+    (with-meta {name (fn-of (apply-of `(~'types ~type)))} {:name name})))
+  
+(defn element->clj [m]
+  (let [name (-> m meta :name)]
+    (with-meta `(assoc ~m ~name ~(fn-of `(conj ~(apply-of (name m)) ~name))) (assoc (meta m) :kind :element))))
+
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
    :NAME (fn [& args] (apply str args))
+   :NAME-TYPE-ATTR name-type->clj
    :STRING #(-> % read-string to-str)
    :RESTRICTION-KWS identity
    :RESTRICTION-BODY (fn [tag value] (restriction->clj (read-string tag) value))
@@ -130,8 +143,8 @@
    :RESTRICTION (fn [base restriction] (fn-of `(and ~(apply-of base) ~(apply-of restriction))))
    :SIMPLETYPE simple-type->clj
    :MEMBERTYPES member-types->clj
+   :ELEMENT element->clj
    :UNION union->clj
-  ; :OPEN-BRACKET (fn [& args] (map read-string args))
    }
   )
 
