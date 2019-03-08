@@ -295,3 +295,28 @@
     (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
     ))
 
+(deftest test-all 
+  (let [f (validation-fn-of 
+          "<all>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </all>" :ALL)]
+    (is (= [true [[true 1 :seq1][true "asdf" :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>asdf</seq2></udr>")) predef-types {} {})))
+    (is (= [true [[true "asdf" :seq2][true 10 :seq1]]] (f (:content (parse-str "<udr><seq2>asdf</seq2><seq1>10</seq1></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    ))
+(deftest test-choice 
+  (let [f (validation-fn-of 
+          "<choice>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </choice>" :CHOICE)]
+    (is (= [false [[true 1 :seq1] [false 2 :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-types {} {})))
+    (is (= [false [[false 2 :seq2] [true 1 :seq1]]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [true [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [true [[true "asdf" :seq2]]] (f (:content (parse-str "<udr><seq2>asdf</seq2></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    ))

@@ -8,11 +8,6 @@
                                              type? element? content-of]]
             [clojure.data.xml :refer [parse-str]]))
 
-(defmacro f-of [expr] `(fn [~'value ~'types ~'attr-groups ~'elements] ~expr))
-
-(defmacro a-of [expr] `(~expr ~'value ~'types ~'attr-groups ~'elements))
-
-
 (defn attrs-of [attrs content]
   (if (empty? attrs)
     content
@@ -45,18 +40,18 @@
                  COMPLEXCONTENT = OPEN-PAREN ':complexContent' SPACE EXTENSION CLOSE-PAREN
                  CONTENT = SIMPLECONTENT | COMPLEXCONTENT
                  EXTENSION = OPEN-PAREN ':extension' SPACE BASE-ATTR SPACE ([ANNOTATION] ([COLLECTION] ATTRIBUTES)) CLOSE-PAREN
-                 ATTRIBUTEGROUP = OPEN-PAREN ':attributeGroup' SPACE ((NAME-ATTR SPACE ATTRIBUTEGROUP-BODY) | REF-ATTR) CLOSE-PAREN
+                 ATTRIBUTEGROUP = OPEN-PAREN <':attributeGroup'> SPACE ((NAME-ATTR SPACE ATTRIBUTEGROUP-BODY) | REF-ATTR) CLOSE-PAREN
                  ATTRIBUTEGROUP-BODY = [ANNOTATION] ATTRIBUTES
                  ATTR-OR-ATTRGROUP = ATTRIBUTE | ATTRIBUTEGROUP
                  ATTRIBUTES = ((ATTR-OR-ATTRGROUP OPTIONAL-SPACE)* | ATTR-OR-ATTRGROUP)
-                 ATTRIBUTE = OPEN-PAREN ':attribute' SPACE ATTRIBUTE-ATTRS CLOSE-PAREN
-                 ATTRIBUTE-ATTRS = ATTRIBUTE-NAME-TYPE | ATTRIBUTE-NAME-ONLY | REF-ATTR
+                 ATTRIBUTE = OPEN-PAREN <':attribute'> SPACE ATTRIBUTE-ATTRS CLOSE-PAREN
+                 <ATTRIBUTE-ATTRS> = ATTRIBUTE-NAME-TYPE | ATTRIBUTE-NAME-ONLY | REF-ATTR
                  ATTRIBUTE-NAME-ONLY = NAME-ATTR SPACE SIMPLETYPE
-                 ATTRIBUTE-NAME-TYPE = (OPEN-BRACKET ':name' SPACE SYMBOL <','> SPACE ':type' SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET)
+                 ATTRIBUTE-NAME-TYPE = (OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET)
                  GROUP = OPEN-PAREN ':group' SPACE (NAME-ATTR SPACE GROUP-BODY) | REF-ATTR | GROUP-BODY CLOSE-PAREN
                  GROUP-BODY = [ANNOTATION] [SEQUENCE | ALL | CHOICE]
-                 ALL = OPEN-PAREN ':all' SPACE ELEMENTS CLOSE-PAREN
-                 CHOICE = OPEN-PAREN ':choice' SPACE ELEMENTS CLOSE-PAREN
+                 ALL = OPEN-PAREN <':all'> SPACE ELEMENTS CLOSE-PAREN
+                 CHOICE = OPEN-PAREN <':choice'> SPACE ELEMENTS CLOSE-PAREN
                  SEQUENCE = OPEN-PAREN <':sequence'> SPACE ELEMENTS CLOSE-PAREN
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
                  <SIMPLETYPES> = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
@@ -168,10 +163,34 @@
   `~(apply-of (m (:tag v)))
   )
 
+
+
+
 (defn sequence->clj [m]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
           [(= (keys ~m) (map :tag ~'value)) 
+           (map 
+             #(if-let 
+                [e# (~'elements (:tag %))] 
+                (e# (content-of %) ~'types ~'attr-groups ~'elements)
+                [false :undefined (:tag %)]
+                ) ~'value)])))
+(defn all->clj [m]
+  (fn-of 
+     `(let [~'elements (merge ~m ~'elements)] 
+          [(= (.keySet ~m) (set (map :tag ~'value))) 
+           (map 
+             #(if-let 
+                [e# (~'elements (:tag %))] 
+                (e# (content-of %) ~'types ~'attr-groups ~'elements)
+                [false :undefined (:tag %)]
+                ) ~'value)])))
+
+(defn choice->clj [m]
+  (fn-of 
+     `(let [~'elements (merge ~m ~'elements)] 
+          [(= (count ~'value) 1) 
            (map 
              #(if-let 
                 [e# (~'elements (:tag %))] 
@@ -200,6 +219,10 @@
    :SCHEMA identity
    :ELEMENTS elements->clj
    :SEQUENCE sequence->clj
+   :ATTRIBUTE-NAME-TYPE name-type->clj
+   :ATTRIBUTE identity
+   :CHOICE choice->clj
+   :ALL all->clj
    }
   )
 
