@@ -253,8 +253,8 @@
   ))
 
 (deftest test-union
-  #_(let [f (validation-fn-of 
-             "<schema>
+  (let [f (validation-fn-of 
+            "<schema>
              <simpleType name=\"mytype\">
               <restriction base=\"integer\">
 		            <minInclusive value=\"36\"/>
@@ -274,12 +274,12 @@
              </simpleType>
            <element name=\"theunion\" type=\"myunion\"/>
            </schema>")]
-     (is (= [false 35 :theunion] (f (parse-str "<theunion>35</theunion>") predef-types {} {})))
-     (is (= [true 36 :theunion] (f (parse-str "<theunion>36</theunion>") predef-types {} {})))
-     (is (= [true "small" :theunion] (f (parse-str "<theunion>small</theunion>") predef-types {} {})))
-     (is (= [true "medium" :theunion] (f (parse-str "<theunion>medium</theunion>") predef-types {} {})))
-     (is (= [false "asdf" :theunion] (f (parse-str "<theunion>asdf</theunion>") predef-types {} {})))
-     ))
+    (is (= [false 35 :theunion] (f (parse-str "<theunion>35</theunion>") predef-types {} {})))
+    (is (= [true 36 :theunion] (f (parse-str "<theunion>36</theunion>") predef-types {} {})))
+    (is (= [true "small" :theunion] (f (parse-str "<theunion>small</theunion>") predef-types {} {})))
+    (is (= [true "medium" :theunion] (f (parse-str "<theunion>medium</theunion>") predef-types {} {})))
+    (is (= [false "asdf" :theunion] (f (parse-str "<theunion>asdf</theunion>") predef-types {} {})))
+    ))
 
 
 

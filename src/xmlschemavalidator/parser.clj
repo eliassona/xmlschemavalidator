@@ -126,8 +126,8 @@
 
 (defn add-try-catch [unions]
   (if (empty? (rest unions))
-    `~(first unions)
-    `(try (throw-if-false ~(first unions)) (catch Exception e# ~(apply-of (add-try-catch (rest unions)))))))
+    (apply-of `~(first unions))
+    `(try (throw-if-false ~(apply-of (first unions))) (catch Exception e# ~(add-try-catch (rest unions))))))
 
 (defn member-types->clj [& args]
   (fn-of (add-try-catch (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))))
