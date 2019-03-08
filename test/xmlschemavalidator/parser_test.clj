@@ -282,5 +282,16 @@
     ))
 
 
-
+(deftest test-sequence 
+  (let [f (validation-fn-of 
+          "<sequence>
+		         <element name=\"seq1\" type=\"integer\"/>
+		         <element name=\"seq2\" type=\"string\"/>
+		       </sequence>" :SEQUENCE)]
+    (is (= [true [[true 1 :seq1] [true "adsf" :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>adsf</seq2></udr>")) predef-types {} {})))
+    (is (= [false [[true "adsf" :seq2] [true 1 :seq1]]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>asdf</seq1></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    ))
 

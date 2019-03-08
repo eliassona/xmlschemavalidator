@@ -57,7 +57,7 @@
                  GROUP-BODY = [ANNOTATION] [SEQUENCE | ALL | CHOICE]
                  ALL = OPEN-PAREN ':all' SPACE ELEMENTS CLOSE-PAREN
                  CHOICE = OPEN-PAREN ':choice' SPACE ELEMENTS CLOSE-PAREN
-                 SEQUENCE = OPEN-PAREN ':sequence' SPACE ELEMENTS CLOSE-PAREN
+                 SEQUENCE = OPEN-PAREN <':sequence'> SPACE ELEMENTS CLOSE-PAREN
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
                  <SIMPLETYPES> = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
                  SIMPLETYPE = (OPEN-PAREN <':simpleType'> SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
@@ -136,8 +136,6 @@
 
 (defn union->clj [& fns]
   (fn-of (add-try-catch fns))
-  #_(fn-of 
-     (add-try-catch (concat fns)))
   )
 
 (defn name-type->clj [name type]
@@ -162,6 +160,26 @@
          ((~'elements (:tag ~'value)) (content-of ~'value) ~'types ~'attr-groups ~'elements)))
     ))
   
+(defn elements->clj [& args]
+  (apply merge args)
+  )
+
+(defn seq->value [m v]
+  `~(apply-of (m (:tag v)))
+  )
+
+(defn sequence->clj [m]
+  (fn-of 
+     `(let [~'elements (merge ~m ~'elements)] 
+          [(= (keys ~m) (map :tag ~'value)) 
+           (map 
+             #(if-let 
+                [e# (~'elements (:tag %))] 
+                (e# (content-of %) ~'types ~'attr-groups ~'elements)
+                [false :undefined (:tag %)]
+                ) ~'value)]
+          ))
+  )
 
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
@@ -180,6 +198,8 @@
    :UNION union->clj
    :TYPES types->clj
    :SCHEMA identity
+   :ELEMENTS elements->clj
+   :SEQUENCE sequence->clj
    }
   )
 
