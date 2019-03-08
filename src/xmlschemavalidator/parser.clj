@@ -1,8 +1,16 @@
 (ns xmlschemavalidator.parser
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
-            [xmlschemavalidator.core :refer [dbg fn-of apply-of predef-types add-try-catch to-str]]
+            [xmlschemavalidator.core :refer [dbg fn-of 
+                                             apply-of predef-types 
+                                             to-str
+                                             throw-if-false
+                                             type? element? content-of]]
             [clojure.data.xml :refer [parse-str]]))
+
+(defmacro f-of [expr] `(fn [~'value ~'types ~'attr-groups ~'elements] ~expr))
+
+(defmacro a-of [expr] `(~expr ~'value ~'types ~'attr-groups ~'elements))
 
 
 (defn attrs-of [attrs content]
@@ -21,14 +29,14 @@
 
 (def parser 
   (insta/parser "
-                 SCHEMA = OPEN-PAREN ':schema' SPACE TYPES CLOSE-PAREN
+                 SCHEMA = OPEN-PAREN <':schema'> SPACE TYPES CLOSE-PAREN
                  SCHEMA-BODY = ((INCLUDE | IMPORT | REDEFINE | ANNOTATION)* (((SIMPLETYPE | COMPLEXTYPE | GROUP | ATTRIBUTEGROUP) | ELEMENT | ATTRIBUTE | NOTATION) ANNOTATION*)*)
                  INCLUDE = OPEN-PAREN ':include' CLOSE-PAREN
                  IMPORT = OPEN-PAREN ':import' CLOSE-PAREN
                  REDEFINE = OPEN-PAREN ':redefine' CLOSE-PAREN
                  NOTATION = OPEN-PAREN ':notation' SPACE OPEN-BRACKET NAME-ATTR <','> SPACE ':public' SPACE STRING CLOSE-BRACKET CLOSE-PAREN
                  TYPES = ((TYPE OPTIONAL-SPACE)* | TYPE)
-                 TYPE = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP | ATTRIBUTE)
+                 <TYPE> = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP | ATTRIBUTE)
                  ELEMENT = OPEN-PAREN <':element'> SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
                  COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
                  COMPLEXTYPE-BODY = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) ATTRIBUTES
@@ -51,14 +59,14 @@
                  CHOICE = OPEN-PAREN ':choice' SPACE ELEMENTS CLOSE-PAREN
                  SEQUENCE = OPEN-PAREN ':sequence' SPACE ELEMENTS CLOSE-PAREN
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
-                 SIMPLETYPES = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
+                 <SIMPLETYPES> = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
                  SIMPLETYPE = (OPEN-PAREN <':simpleType'> SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
                  REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
                  NAME-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
                  NAME-TYPE-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL CLOSE-BRACKET
                  <SIMPLETYPE-BODY> = [ANNOTATION] (LIST | UNION | RESTRICTION)
                  LIST = OPEN-PAREN <':list'> SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
-                 UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> SPACE MEMBERTYPES CLOSE-BRACKET] SIMPLETYPES CLOSE-PAREN
+                 UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> OPTIONAL-SPACE MEMBERTYPES CLOSE-BRACKET] OPTIONAL-SPACE SIMPLETYPES CLOSE-PAREN
                  MEMBERTYPES = <'\"'> (NAME SPACE)* NAME <'\"'> 
                  ANNOTATION = OPEN-PAREN CLOSE-PAREN
                  
@@ -116,25 +124,50 @@
     (let [name (-> m meta :name)]
       (vary-meta m assoc :kind :type))))
 
+(defn add-try-catch [unions]
+  (if (empty? (rest unions))
+    `~(first unions)
+    `(try (throw-if-false ~(first unions)) (catch Exception e# ~(apply-of (add-try-catch (rest unions)))))))
+
 (defn member-types->clj [& args]
-  (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))
+  (fn-of (add-try-catch (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))))
+
+
 
 (defn union->clj [& fns]
-  (add-try-catch fns)
+  (fn-of (add-try-catch fns))
+  #_(fn-of 
+     (add-try-catch (concat fns)))
   )
 
 (defn name-type->clj [name type]
   (let [name (keyword name)]
     (with-meta {name (fn-of (apply-of `(~'types ~type)))} {:name name})))
+
+(defn name->clj [name]
+  (let [name name]
+    name))
+
   
 (defn element->clj [m]
   (let [name (-> m meta :name)]
-    (with-meta `(assoc ~m ~name ~(fn-of `(conj ~(apply-of (name m)) ~name))) (assoc (meta m) :kind :element))))
+    (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element))))
+
+(defn types->clj [& maps]
+  (let [types (filter type? maps)
+        elements (filter element? maps)]
+    (fn-of 
+      `(let [~'types (merge ~(apply merge types) ~'types)
+             ~'elements (merge ~(apply merge elements) ~'elements)]
+         ((~'elements (:tag ~'value)) (content-of ~'value) ~'types ~'attr-groups ~'elements)))
+    ))
+  
 
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
    :NAME (fn [& args] (apply str args))
    :NAME-TYPE-ATTR name-type->clj
+   :NAME-ATTR name->clj
    :STRING #(-> % read-string to-str)
    :RESTRICTION-KWS identity
    :RESTRICTION-BODY (fn [tag value] (restriction->clj (read-string tag) value))
@@ -145,6 +178,8 @@
    :MEMBERTYPES member-types->clj
    :ELEMENT element->clj
    :UNION union->clj
+   :TYPES types->clj
+   :SCHEMA identity
    }
   )
 
@@ -164,3 +199,5 @@
   ([schema]
     (eval (validation-expr-of schema))))
     
+
+

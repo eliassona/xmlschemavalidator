@@ -3,7 +3,7 @@
   (:require [clojure.test :refer :all]
             [instaparse.core :as insta]
             [clojure.data.xml :refer [parse-str parse sexp-as-element]]
-            [xmlschemavalidator.core :refer [predef-types]]
+            [xmlschemavalidator.core :refer [predef-types dbg apply-of]]
             [xmlschemavalidator.parser :refer :all]))
 
 
@@ -220,3 +220,67 @@
     (is (= [true 127 :abyte] ((f :abyte) 127 predef-types {} {})))
     (is (= [false 128 :abyte] ((f :abyte) 128 predef-types {} {})))
   ))
+
+(deftest test-schema-with-predefs
+  (let [f (validation-fn-of 
+              "<schema>
+              <element name=\"abyte\" type=\"byte\"/>
+              <element name=\"anint\" type=\"integer\"/>
+             </schema>")]
+      (is (= [true 0 :anint] (f (parse-str "<anint>0</anint>") predef-types {} {})))
+      (is (= [true 0 :abyte] (f (parse-str "<abyte>0</abyte>") predef-types {} {})))
+      (is (= [false 128 :abyte] (f (parse-str "<abyte>128</abyte>") predef-types {} {})))
+  ))
+
+(deftest test-schema-with-simple-type
+  (let [f (validation-fn-of 
+            "<schema>
+              <simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>  
+              <element name=\"abyte\" type=\"byte\"/>
+              <element name=\"anint\" type=\"integer\"/>
+              <element name=\"my\" type=\"mytype\"/>
+             </schema>")]
+    (is (= [true 0 :anint] (f (parse-str "<anint>0</anint>") predef-types {} {})))
+    (is (= [true 0 :abyte] (f (parse-str "<abyte>0</abyte>") predef-types {} {})))
+    (is (= [false 128 :abyte] (f (parse-str "<abyte>128</abyte>") predef-types {} {})))
+    (is (= [true 36 :my] (f (parse-str "<my>36</my>") predef-types {} {})))
+    (is (= [false 35 :my] (f (parse-str "<my>35</my>") predef-types {} {})))
+  ))
+
+(deftest test-union
+  #_(let [f (validation-fn-of 
+             "<schema>
+             <simpleType name=\"mytype\">
+              <restriction base=\"integer\">
+		            <minInclusive value=\"36\"/>
+		            <maxInclusive value=\"42\"/>
+		          </restriction>
+             </simpleType>
+             <simpleType name=\"myunion\">
+                <union memberTypes=\"mytype\">  
+                   <simpleType> 
+                     <restriction base=\"string\">
+                       <enumeration value=\"small\"/> 
+                       <enumeration value=\"medium\"/> 
+                       <enumeration value=\"large\"/> 
+                     </restriction> 
+                   </simpleType>
+                </union>  
+             </simpleType>
+           <element name=\"theunion\" type=\"myunion\"/>
+           </schema>")]
+     (is (= [false 35 :theunion] (f (parse-str "<theunion>35</theunion>") predef-types {} {})))
+     (is (= [true 36 :theunion] (f (parse-str "<theunion>36</theunion>") predef-types {} {})))
+     (is (= [true "small" :theunion] (f (parse-str "<theunion>small</theunion>") predef-types {} {})))
+     (is (= [true "medium" :theunion] (f (parse-str "<theunion>medium</theunion>") predef-types {} {})))
+     (is (= [false "asdf" :theunion] (f (parse-str "<theunion>asdf</theunion>") predef-types {} {})))
+     ))
+
+
+
+
