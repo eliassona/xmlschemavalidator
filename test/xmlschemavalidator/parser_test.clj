@@ -2,7 +2,7 @@
   (:use [clojure.pprint])
   (:require [clojure.test :refer :all]
             [instaparse.core :as insta]
-            [clojure.data.xml :refer [parse-str parse sexp-as-element]]
+            [clojure.data.xml :refer [parse-str parse sexp-as-element emit-str]]
             [xmlschemavalidator.core :refer [predef-types dbg apply-of]]
             [xmlschemavalidator.parser :refer :all]))
 
@@ -320,3 +320,22 @@
     (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
     (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
     ))
+
+
+(deftest test-complex-type
+  (let [e (validation-expr-of 
+            "<complexType name=\"cp\">
+<!--
+              <sequence>
+                <element name=\"seq\" type=\"string\"/>
+              </sequence>
+-->
+              <attribute name=\"country\" type=\"string\"/>
+              <attribute name=\"zip\" type=\"integer\"/>
+             </complexType>" :COMPLEXTYPE)]
+    (is (= :type (-> e meta :kind)))
+;    (is (= [true 0] ((eval (first (vals e))) (parse-str "<udr country=\"usa\" zip=\"13672\"><seq>asdf</seq></udr>") predef-types {} {})))
+    
+    ))
+
+

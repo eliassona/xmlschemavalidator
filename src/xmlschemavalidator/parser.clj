@@ -3,7 +3,7 @@
   (:require [instaparse.core :as insta]
             [xmlschemavalidator.core :refer [dbg fn-of 
                                              apply-of predef-types 
-                                             to-str
+                                             to-str def-base
                                              throw-if-false
                                              type? element? content-of]]
             [clojure.data.xml :refer [parse-str]]))
@@ -33,16 +33,16 @@
                  TYPES = ((TYPE OPTIONAL-SPACE)* | TYPE)
                  <TYPE> = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP | ATTRIBUTE)
                  ELEMENT = OPEN-PAREN <':element'> SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
-                 COMPLEXTYPE = OPEN-PAREN ':complexType' SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
-                 COMPLEXTYPE-BODY = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) ATTRIBUTES
-                 COLLECTION = SEQUENCE | ALL | GROUP | CHOICE
+                 COMPLEXTYPE = OPEN-PAREN <':complexType'> SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
+                 <COMPLEXTYPE-BODY> = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) OPTIONAL-SPACE ATTRIBUTES
+                 <COLLECTION> = SEQUENCE | ALL | GROUP | CHOICE
                  SIMPLECONTENT = OPEN-PAREN ':simpleContent' SPACE [ANNOTATION] (RESTRICTION | EXTENSION) CLOSE-PAREN
                  COMPLEXCONTENT = OPEN-PAREN ':complexContent' SPACE EXTENSION CLOSE-PAREN
                  CONTENT = SIMPLECONTENT | COMPLEXCONTENT
                  EXTENSION = OPEN-PAREN ':extension' SPACE BASE-ATTR SPACE ([ANNOTATION] ([COLLECTION] ATTRIBUTES)) CLOSE-PAREN
                  ATTRIBUTEGROUP = OPEN-PAREN <':attributeGroup'> SPACE ((NAME-ATTR SPACE ATTRIBUTEGROUP-BODY) | REF-ATTR) CLOSE-PAREN
                  ATTRIBUTEGROUP-BODY = [ANNOTATION] ATTRIBUTES
-                 ATTR-OR-ATTRGROUP = ATTRIBUTE | ATTRIBUTEGROUP
+                 <ATTR-OR-ATTRGROUP> = ATTRIBUTE | ATTRIBUTEGROUP
                  ATTRIBUTES = ((ATTR-OR-ATTRGROUP OPTIONAL-SPACE)* | ATTR-OR-ATTRGROUP)
                  ATTRIBUTE = OPEN-PAREN <':attribute'> SPACE ATTRIBUTE-ATTRS CLOSE-PAREN
                  <ATTRIBUTE-ATTRS> = ATTRIBUTE-NAME-TYPE | ATTRIBUTE-NAME-ONLY | REF-ATTR
@@ -159,13 +159,6 @@
   (apply merge args)
   )
 
-(defn seq->value [m v]
-  `~(apply-of (m (:tag v)))
-  )
-
-
-
-
 (defn sequence->clj [m]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
@@ -176,6 +169,7 @@
                 (e# (content-of %) ~'types ~'attr-groups ~'elements)
                 [false :undefined (:tag %)]
                 ) ~'value)])))
+
 (defn all->clj [m]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
@@ -200,6 +194,18 @@
           ))
   )
 
+
+
+(defn complex-type->clj
+  #_([name coll attrs]
+     (with-meta 
+       `(let [as# ~attrs]
+          {name (fn-of (:attrs ~'value))}) {:kind :type}))
+  ([name attrs]
+    (with-meta 
+      `(let [~'as ~attrs]
+         ~{name (fn-of `(map (fn [~'e] (((key ~'e) ~'as) (val ~'e) ~'types ~'attr-groups ~'elements)) (:attrs ~'value)))}) {:kind :type})))
+
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
    :NAME (fn [& args] (apply str args))
@@ -211,6 +217,7 @@
    :RESTRICTION_BODIES restrictions->clj 
    :BASE-ATTR (fn [base] (fn-of (apply-of `(~'types ~base))))
    :RESTRICTION (fn [base restriction] (fn-of `(and ~(apply-of base) ~(apply-of restriction))))
+
    :SIMPLETYPE simple-type->clj
    :MEMBERTYPES member-types->clj
    :ELEMENT element->clj
@@ -223,6 +230,8 @@
    :ATTRIBUTE identity
    :CHOICE choice->clj
    :ALL all->clj
+   :COMPLEXTYPE complex-type->clj
+   :ATTRIBUTES (fn [& args] (apply merge args))
    }
   )
 
