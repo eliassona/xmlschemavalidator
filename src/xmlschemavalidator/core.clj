@@ -16,7 +16,7 @@
 
 (defmacro def-base [expr base]
   (fn-of 
-    `(let [t# ((~'types ~base) ~'value ~'types ~'attr-groups ~'elements)]
+    `(let [t# ~(apply-of `(~'types ~base))]
        [(and (first t# ) ~expr) (second t#)])))
 
 (declare transform)
