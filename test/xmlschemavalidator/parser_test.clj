@@ -344,4 +344,19 @@
     
     ))
 
+(deftest test-simple-element
+  (let [f (validation-fn-of
+            (sexp-as-element [:schema [:element {:name "hej" :type "int"}]]))]
+    (is (= [true 0 :hej] (f (sexp-as-element [:hej 0]) predef-types {} {})))
+    (is (= [true 100 :hej] (f (sexp-as-element [:hej 100]) predef-types {} {})))
+    (is (= [false 2147483648 :hej] (f (sexp-as-element [:hej 2147483648]) predef-types {} {})))
+    
+    )
+  )
+
+(comment
+  (validation-expr-of 
+  (sexp-as-element [:schema [:element {:name "hej"} 
+                             [:complexType 
+                              [:attribute {:name "attr1" :type "int"}]]]])))
 

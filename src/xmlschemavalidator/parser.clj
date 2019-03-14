@@ -201,7 +201,6 @@
    :RESTRICTION_BODIES restrictions->clj 
    :BASE-ATTR (fn [base] (fn-of (apply-of `(~'types ~base))))
    :RESTRICTION (fn [base restriction] (fn-of `(and ~(apply-of base) ~(apply-of restriction))))
-
    :SIMPLETYPE simple-type->clj
    :MEMBERTYPES member-types->clj
    :ELEMENT element->clj
@@ -219,9 +218,7 @@
    }
   )
 
-(defn ast->clj [ast]
-  (insta/transform ast->clj-map ast))
-
+(defn ast->clj [ast] (insta/transform ast->clj-map ast))
 
 (defn validation-expr-of 
   ([schema start]
