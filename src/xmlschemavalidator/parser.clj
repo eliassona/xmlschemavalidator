@@ -64,7 +64,6 @@
                  UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> OPTIONAL-SPACE MEMBERTYPES CLOSE-BRACKET] OPTIONAL-SPACE SIMPLETYPES CLOSE-PAREN
                  MEMBERTYPES = <'\"'> (NAME SPACE)* NAME <'\"'> 
                  ANNOTATION = OPEN-PAREN CLOSE-PAREN
-                 
                  RESTRICTION = OPEN-PAREN <':restriction'> SPACE BASE-ATTR SPACE RESTRICTION_BODIES CLOSE-PAREN
                  BASE-ATTR = OPEN-BRACKET <':base'> SPACE SYMBOL CLOSE-BRACKET
                  RESTRICTION_BODIES = ((RESTRICTION-BODY SPACE)* RESTRICTION-BODY)
@@ -82,7 +81,6 @@
 
 "))
 
-
 (defprotocol IParser
   (xml-parse [o]))
 
@@ -92,8 +90,7 @@
   clojure.data.xml.Element
   (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
 
-(defn math-expr-of [op value]
-  (with-meta (fn-of `(~op ~'value ~value)) {:kind :range}))
+(defn math-expr-of [op value] (with-meta (fn-of `(~op ~'value ~value)) {:kind :range}))
 
 (defn restriction->clj [tag value]
     (condp = tag
@@ -105,8 +102,7 @@
      (math-expr-of `<= value)
      ))
 
-(defn enumeration? [args]
-  (every? #(= (-> % meta :kind) :enumeration) args))
+(defn enumeration? [args] (every? #(= (-> % meta :kind) :enumeration) args))
 
 (defn restrictions->clj [& args]
   (fn-of
@@ -127,11 +123,7 @@
 (defn member-types->clj [& args]
   (fn-of (add-try-catch (map (fn [a] (fn-of (apply-of `(~'types ~a)))) args))))
 
-
-
-(defn union->clj [& fns]
-  (fn-of (add-try-catch fns))
-  )
+(defn union->clj [& fns] (fn-of (add-try-catch fns)))
 
 (defn name-type->clj [name type]
   (let [name (keyword name)]
@@ -140,7 +132,6 @@
 (defn name->clj [name]
   (let [name name]
     name))
-
   
 (defn element->clj [m]
   (let [name (-> m meta :name)]
@@ -155,14 +146,12 @@
          ((~'elements (:tag ~'value)) (content-of ~'value) ~'types ~'attr-groups ~'elements)))
     ))
   
-(defn elements->clj [& args]
-  (apply merge args)
-  )
+(defn elements->clj [& args] (apply merge args))
 
-(defn sequence->clj [m]
+(defn container->clj [m cond-fn]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
-          [(= (keys ~m) (map :tag ~'value)) 
+          [~(cond-fn m 'value) 
            (map 
              #(if-let 
                 [e# (~'elements (:tag %))] 
@@ -170,29 +159,17 @@
                 [false :undefined (:tag %)]
                 ) ~'value)])))
 
-(defn all->clj [m]
-  (fn-of 
-     `(let [~'elements (merge ~m ~'elements)] 
-          [(= (.keySet ~m) (set (map :tag ~'value))) 
-           (map 
-             #(if-let 
-                [e# (~'elements (:tag %))] 
-                (e# (content-of %) ~'types ~'attr-groups ~'elements)
-                [false :undefined (:tag %)]
-                ) ~'value)])))
+(defn sequence-cond->clj [m value] `(= (keys ~m) (map :tag ~value)))
 
-(defn choice->clj [m]
-  (fn-of 
-     `(let [~'elements (merge ~m ~'elements)] 
-          [(= (count ~'value) 1) 
-           (map 
-             #(if-let 
-                [e# (~'elements (:tag %))] 
-                (e# (content-of %) ~'types ~'attr-groups ~'elements)
-                [false :undefined (:tag %)]
-                ) ~'value)]
-          ))
-  )
+(defn sequence->clj [m] (container->clj m sequence-cond->clj))
+
+(defn all-cond->clj [m value] `(= (.keySet ~m) (set (map :tag ~value))))
+
+(defn all->clj [m] (container->clj m all-cond->clj))
+
+(defn choice-cond->clj [_ value] `(= (count ~value) 1))
+
+(defn choice->clj [m] (container->clj m choice-cond->clj))
 
 (defn attr->clj [attrs]
   (fn-of 
@@ -205,10 +182,7 @@
 (defn coll->clj [coll attrs]
   (fn-of
     `(let [coll-res# (~coll (:content ~'value) ~'types ~'attr-groups ~'elements)]
-       [(first coll-res#) (set ~(apply-of (attr->clj attrs))) (second coll-res#)])
-    ))
-
-
+       [(first coll-res#) (set ~(apply-of (attr->clj attrs))) (second coll-res#)])))
 
 (defn complex-type->clj
   ([name coll attrs]
@@ -260,6 +234,3 @@
     (eval (validation-expr-of schema start)))
   ([schema]
     (eval (validation-expr-of schema))))
-    
-
-
