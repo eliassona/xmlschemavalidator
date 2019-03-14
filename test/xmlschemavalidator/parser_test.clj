@@ -2,7 +2,7 @@
   (:use [clojure.pprint])
   (:require [clojure.test :refer :all]
             [instaparse.core :as insta]
-            [clojure.data.xml :refer [parse-str parse sexp-as-element emit-str]]
+            [clojure.data.xml :refer [parse-str parse sexp-as-element emit-str indent-str]]
             [xmlschemavalidator.core :refer [predef-types dbg apply-of]]
             [xmlschemavalidator.parser :refer :all]))
 
@@ -86,6 +86,7 @@
       <attributeGroup ref=\"personattr\"/>
     </complexType>
    </schema>"
+   
    ]
    
    [:SCHEMA 
@@ -102,6 +103,9 @@
      <attribute ref=\"code\"/>
    </complexType>
  </schema>"]
+   
+  
+
    
    #_[:SCHEMA "
     <schema>
@@ -325,16 +329,18 @@
 (deftest test-complex-type
   (let [e (validation-expr-of 
             "<complexType name=\"cp\">
-<!--
               <sequence>
-                <element name=\"seq\" type=\"string\"/>
+                <element name=\"seq1\" type=\"string\"/>
+                <element name=\"seq2\" type=\"string\"/>
               </sequence>
--->
               <attribute name=\"country\" type=\"string\"/>
               <attribute name=\"zip\" type=\"integer\"/>
              </complexType>" :COMPLEXTYPE)]
     (is (= :type (-> e meta :kind)))
-;    (is (= [true 0] ((eval (first (vals e))) (parse-str "<udr country=\"usa\" zip=\"13672\"><seq>asdf</seq></udr>") predef-types {} {})))
+    (is (= [true 
+            #{[true "usa" :country] [true 13672 :zip]} 
+            [[true "hej" :seq1] [true "bla" :seq2]]] 
+           ((-> e eval first val) (sexp-as-element [:udr {:country "usa", :zip 13672} [:seq1 "hej"][:seq2 "bla"]]) predef-types {} {})))
     
     ))
 

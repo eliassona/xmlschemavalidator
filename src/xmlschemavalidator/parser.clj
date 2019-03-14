@@ -194,24 +194,24 @@
           ))
   )
 
+(defn coll->clj [coll]
+  (fn-of
+    `(~coll (:content ~'value) ~'types ~'attr-groups ~'elements)
+    ))
 
+(defn attr->clj [attrs]
+  (fn-of 
+     `(map 
+        (fn [~'e] (conj 
+                    (((key ~'e) ~attrs) 
+                      (-> ~'e val read-string to-str) ~'types ~'attr-groups ~'elements) (key ~'e))) 
+        (:attrs ~'value))))
 
 (defn complex-type->clj
   ([name coll attrs]
-    (with-meta 
-      `(let [as# ~attrs]
-         ~{name (fn-of `(~coll (:content ~'value) ~'types ~'attr-groups ~'elements))}) {:kind :type}))
+    (with-meta {name (coll->clj coll)} {:kind :type}))
   ([name attrs]
-    (with-meta 
-      `(let [~'as ~attrs]
-         ~{name 
-           (fn-of 
-             `(map 
-                (fn [~'e] (conj 
-                            (((key ~'e) ~'as) 
-                              (-> ~'e val read-string to-str) ~'types ~'attr-groups ~'elements) (key ~'e))) 
-                (:attrs ~'value)))}) 
-      {:kind :type})))
+    (with-meta {name (attr->clj attrs)} {:kind :type})))
 
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
