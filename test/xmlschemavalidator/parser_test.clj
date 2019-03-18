@@ -340,7 +340,7 @@
     (is (= [true 
             #{[true "usa" :country] [true 13672 :zip]} 
             [[true "hej" :seq1] [true "bla" :seq2]]] 
-           ((-> e eval first val) (sexp-as-element [:udr {:country "usa", :zip 13672} [:seq1 "hej"][:seq2 "bla"]]) predef-types {} {})))
+           ((-> e eval first val) (content-of (sexp-as-element [:udr {:country "usa", :zip 13672} [:seq1 "hej"][:seq2 "bla"]])) predef-types {} {})))
     
     ))
 
@@ -354,9 +354,32 @@
     )
   )
 
+
+(deftest test-element-with-complex-type 
+  (let [f (validation-fn-of 
+    "<schema>
+     <complexType name=\"cp\">
+       <sequence>
+         <element name=\"test\" type=\"integer\"/>
+       </sequence>
+     </complexType>
+		<element name=\"udr\" type=\"cp\">
+		  </element>
+    </schema>")]
+    (is (= [true [[false 0 :uniontest]] :udr] (f (parse-str "<udr><uniontest>0</uniontest></udr>") predef-types {} {})))
+    (is (= [true [[true 36 :uniontest]] :udr] (f (parse-str "<udr><uniontest>36</uniontest></udr>") predef-types {} {})))
+    (is (= [true [[true "small" :uniontest]] :udr] (f (parse-str "<udr><uniontest>small</uniontest></udr>") predef-types {} {})))
+    (is (= [true [[false "randomstring" :uniontest]] :udr] (f (parse-str "<udr><uniontest>randomstring</uniontest></udr>") predef-types {} {})))
+    
+    ))
+
 (comment
   (validation-expr-of 
   (sexp-as-element [:schema [:element {:name "hej"} 
                              [:complexType 
                               [:attribute {:name "attr1" :type "int"}]]]])))
+
+
+
+
 

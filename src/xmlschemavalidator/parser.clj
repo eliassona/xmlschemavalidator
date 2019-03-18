@@ -5,8 +5,16 @@
                                              apply-of predef-types 
                                              to-str def-base
                                              throw-if-false
-                                             type? element? content-of]]
+                                             type? element?]]
             [clojure.data.xml :refer [parse-str]]))
+
+(defn simple-type? [value]
+  (and (= (count value) 1) (not (map? (first value)))))
+(defn content-of [value]
+  (let [content (:content value)]
+    (if (simple-type? content)
+      (-> content first read-string to-str)
+      (with-meta content (:attrs value)))))
 
 (defn attrs-of [attrs content]
   (if (empty? attrs)
@@ -173,15 +181,16 @@
 
 (defn attr->clj [attrs]
   (fn-of 
-     `(map 
-        (fn [e#] (conj 
-                   (((key e#) ~attrs) 
-                     (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
-        (:attrs ~'value))))
+     `(do 
+        (map 
+         (fn [e#] (conj 
+                    (((key e#) ~attrs) 
+                      (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
+         (meta ~'value)))))
 
 (defn coll->clj [coll attrs]
   (fn-of
-    `(let [coll-res# (~coll (:content ~'value) ~'types ~'attr-groups ~'elements)]
+    `(let [coll-res# (~coll ~'value ~'types ~'attr-groups ~'elements)]
        [(first coll-res#) (set ~(apply-of (attr->clj attrs))) (second coll-res#)])))
 
 (defn complex-type->clj
