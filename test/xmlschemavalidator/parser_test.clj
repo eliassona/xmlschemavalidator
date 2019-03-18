@@ -360,16 +360,16 @@
     "<schema>
      <complexType name=\"cp\">
        <sequence>
-         <element name=\"test\" type=\"integer\"/>
+         <element name=\"test\" type=\"byte\"/>
        </sequence>
      </complexType>
 		<element name=\"udr\" type=\"cp\">
 		  </element>
     </schema>")]
-    (is (= [true [[false 0 :uniontest]] :udr] (f (parse-str "<udr><uniontest>0</uniontest></udr>") predef-types {} {})))
-    (is (= [true [[true 36 :uniontest]] :udr] (f (parse-str "<udr><uniontest>36</uniontest></udr>") predef-types {} {})))
-    (is (= [true [[true "small" :uniontest]] :udr] (f (parse-str "<udr><uniontest>small</uniontest></udr>") predef-types {} {})))
-    (is (= [true [[false "randomstring" :uniontest]] :udr] (f (parse-str "<udr><uniontest>randomstring</uniontest></udr>") predef-types {} {})))
+    (is (= [true #{} [[true 0 :test]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
+    (is (= [true #{} [[true 36 :test]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
+    (is (= [true #{} [[false 128 :test]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
+    (is (= [true #{} [[false -129 :test]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
     
     ))
 
