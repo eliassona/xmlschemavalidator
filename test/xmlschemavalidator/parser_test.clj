@@ -401,7 +401,7 @@
     (is (= [false "asdf" :udr] (f (sexp-as-element [:udr "asdf"]) predef-types {} {})))    
    ))
     
-(deftest test-inline-element
+(deftest test-inline-element-with-one-attr
   (let [f (validation-fn-of
             (sexp-as-element [:schema 
                               [:element {:name "udr"} 
@@ -410,8 +410,38 @@
     (is (= [true #{[true 10 :attr1]} :udr] (f (sexp-as-element [:udr {:attr1 10}]) predef-types {} {})))
     ))
 
- (comment
-   (validation-expr-of 
-   (sexp-as-element [:schema [:element {:name "hej"} 
-                              [:complexType 
-                               [:attribute {:name "attr1" :type "int"}]]]])))
+(deftest test-inline-element-with-two-attrs
+  (let [f (validation-fn-of
+            (sexp-as-element [:schema 
+                              [:element {:name "udr"} 
+                               [:complexType 
+                                [:attribute {:name "attr1" :type "byte"}]
+                                [:attribute {:name "attr2" :type "string"}]]]]))]
+    (is (= [true #{[true 10 :attr1][true "hej" :attr2]} :udr] (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"}]) predef-types {} {})))
+    ))
+
+(deftest test-inline-element-with-seq
+  (let [f (validation-fn-of
+              (sexp-as-element [:schema 
+                                [:element {:name "udr"} 
+                                 [:complexType
+                                  [:sequence
+                                   [:element {:name "seq1" :type "positiveInteger"}]
+                                   ]]]]))]
+      (is (= [true [true #{} [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr [:seq1 1]]) predef-types {} {})))
+      ))
+
+(deftest test-inline-element-with-seq-and-two-attrs
+  (let [f (validation-fn-of
+              (sexp-as-element [:schema 
+                                [:element {:name "udr"} 
+                                 [:complexType
+                                  [:sequence
+                                   [:element {:name "seq1" :type "positiveInteger"}]
+                                   ]
+                                  [:attribute {:name "attr1" :type "byte"}]
+                                  [:attribute {:name "attr2" :type "string"}]]]]))]
+      (is (= [true [true #{[true 10 :attr1][true "hej" :attr2]} [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]]) predef-types {} {})))
+      ))
+
+ 

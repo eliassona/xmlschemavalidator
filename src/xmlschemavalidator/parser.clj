@@ -210,7 +210,7 @@
       (with-meta {name (coll->clj coll attrs)} {:kind :type})))
   clojure.lang.Cons
   (complex-type->clj 
-    ([coll attrs] coll))
+    ([coll attrs] (coll->clj coll attrs)))
   java.util.Map
   (complex-type->clj 
     ([attrs]
