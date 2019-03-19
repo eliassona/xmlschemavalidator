@@ -185,12 +185,13 @@
 
 (defn attr->clj [attrs]
   (fn-of 
-     `(set 
-        (map 
-         (fn [e#] (conj 
-                    (((key e#) ~attrs) 
-                      (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
-         (meta ~'value)))))
+     `#{ 
+         (conj
+           (map 
+            (fn [e#] (conj 
+                       (((key e#) ~attrs) 
+                         (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
+            (meta ~'value)) true)}))
 
 (defn coll->clj [coll attrs]
   (fn-of
