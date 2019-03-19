@@ -89,14 +89,14 @@
 
 "))
 
-(defprotocol IParser
-  (xml-parse [o]))
+(defprotocol IXmlToHiccupParser
+  (xml->hiccup [o]))
 
-(extend-protocol IParser
+(extend-protocol IXmlToHiccupParser
   String
-  (xml-parse [xml-syntax] (xml-parse (parse-str xml-syntax)))
+  (xml->hiccup [xml-syntax] (xml->hiccup (parse-str xml-syntax)))
   clojure.data.xml.Element
-  (xml-parse [xml-syntax] (-> xml-syntax element->hiccup str)))
+  (xml->hiccup [xml-syntax] (-> xml-syntax element->hiccup str)))
 
 (defn math-expr-of [op value] (with-meta (fn-of `(~op ~'value ~value)) {:kind :range}))
 
@@ -246,9 +246,10 @@
 
 (defn ast->clj [ast] (insta/transform ast->clj-map ast))
 
+
 (defn validation-expr-of 
   ([schema start]
-  (-> schema xml-parse (parser :start start) ast->clj))
+  (-> schema xml->hiccup (parser :start start) ast->clj))
   ([schema]
     (validation-expr-of schema :SCHEMA)))
 

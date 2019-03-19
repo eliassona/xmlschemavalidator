@@ -9,7 +9,7 @@
 
 (defn assert-parsing [& texts]
   (doseq [[start t] texts]
-    (let [res (-> t xml-parse (parser :start start))]
+    (let [res (-> t xml->hiccup (parser :start start))]
       (is (= false (insta/failure? res)) (insta/get-failure res)))))
 
 (deftest test-parsing
