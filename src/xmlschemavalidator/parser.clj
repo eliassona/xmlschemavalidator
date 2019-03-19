@@ -6,7 +6,7 @@
                                              to-str def-base
                                              throw-if-false
                                              type? element?]]
-            [clojure.data.xml :refer [parse-str]]))
+            [clojure.data.xml :refer [parse-str sexp-as-element]]))
 
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
@@ -95,6 +95,8 @@
 (extend-protocol IXmlToHiccupParser
   String
   (xml->hiccup [xml-syntax] (xml->hiccup (parse-str xml-syntax)))
+  clojure.lang.PersistentVector
+  (xml->hiccup [sexp-syntax] (xml->hiccup (sexp-as-element sexp-syntax)))
   clojure.data.xml.Element
   (xml->hiccup [xml-syntax] (-> xml-syntax element->hiccup str)))
 
