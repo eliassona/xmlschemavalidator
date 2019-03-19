@@ -373,11 +373,38 @@
     
     ))
 
-(comment
-  (validation-expr-of 
-  (sexp-as-element [:schema [:element {:name "hej"} 
-                             [:complexType 
-                              [:attribute {:name "attr1" :type "int"}]]]])))
+(deftest test-element-with-union-type
+  (let [f (validation-fn-of
+            (sexp-as-element
+              [:schema
+               [:simpleType {:name "aunion"}
+                [:union {:memberTypes "byte"}
+                 [:simpleType
+                  [:restriction {:base "string"}
+                   [:enumeration {:value "small"}]
+                   [:enumeration {:value "medium"}]
+                   [:enumeration {:value "large"}]]]]]
+               [:element {:name "udr", :type "aunion"}]]))]
+    (is (= [true 10 :udr] (f (sexp-as-element [:udr 10]) predef-types {} {})))
+    (is (= [false 128 :udr] (f (sexp-as-element [:udr 128]) predef-types {} {})))
+    (is (= [true "small" :udr] (f (sexp-as-element [:udr "small"]) predef-types {} {})))
+    (is (= [false "asdf" :udr] (f (sexp-as-element [:udr "asdf"]) predef-types {} {})))    
+   ))
+    
+(deftest test-inline-element
+  #_(let [f (validation-fn-of
+             (sexp-as-element [:schema 
+                               [:element {:name "hej"} 
+                                [:complexType 
+                                 [:attribute {:name "attr1" :type "byte"}]]]]))]
+     (is (= [true #{[true 10 :attr1]}] (f (sexp-as-element [:hej {:attr1 10}]) predef-types {} {})))
+     ))
+
+ (comment
+   (validation-expr-of 
+   (sexp-as-element [:schema [:element {:name "hej"} 
+                              [:complexType 
+                               [:attribute {:name "attr1" :type "int"}]]]])))
 
 
 

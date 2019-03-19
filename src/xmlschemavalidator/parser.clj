@@ -141,9 +141,12 @@
   (let [name name]
     name))
   
-(defn element->clj [m]
+(defn element->clj 
+  ([m]
   (let [name (-> m meta :name)]
     (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element))))
+  ([name the-fn]
+    (with-meta {name (fn-of `(~the-fn (content-of ~'value) ~'types ~'attr-groups ~'elements))} {:kind :element})))
 
 (defn types->clj [& maps]
   (let [types (filter type? maps)
@@ -192,11 +195,24 @@
     `(let [coll-res# (~coll ~'value ~'types ~'attr-groups ~'elements)]
        [(first coll-res#) (set ~(apply-of (attr->clj attrs))) (second coll-res#)])))
 
-(defn complex-type->clj
-  ([name coll attrs]
-    (with-meta {name (coll->clj coll attrs)} {:kind :type}))
-  ([name attrs]
-    (with-meta {name (attr->clj attrs)} {:kind :type})))
+(defprotocol IComplexType
+  (complex-type->clj [attrs] [o1 o2] [o1 o2 o3])
+  )
+
+(extend-protocol IComplexType
+  String
+  (complex-type->clj 
+    ([name attrs]
+      (with-meta {name (attr->clj attrs)} {:kind :type}))
+    ([name coll attrs]
+      (with-meta {name (coll->clj coll attrs)} {:kind :type})))
+  clojure.lang.Cons
+  (complex-type->clj 
+    ([coll attrs] coll))
+  java.util.Map
+  (complex-type->clj 
+    ([attrs]
+      (attr->clj attrs))))
 
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
