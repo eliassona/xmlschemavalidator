@@ -337,9 +337,8 @@
               <attribute name=\"zip\" type=\"integer\"/>
              </complexType>" :COMPLEXTYPE)]
     (is (= :type (-> e meta :kind)))
-    (is (= [true 
-            #{[true [true "usa" :country] [true 13672 :zip]]} 
-            [[true "hej" :seq1] [true "bla" :seq2]]] 
+    (is (= [true #{[true [true "usa" :country] [true 13672 :zip]]} 
+            [true [[true "hej" :seq1] [true "bla" :seq2]]]] 
            ((-> e eval first val) (content-of (sexp-as-element [:udr {:country "usa", :zip 13672} [:seq1 "hej"][:seq2 "bla"]])) predef-types {} {})))
     
     ))
@@ -349,8 +348,8 @@
             (sexp-as-element [:complexType 
                              [:attribute {:name "attr1" :type "byte"}]]) :COMPLEXTYPE)]
     (is (= nil (-> e meta :kind)))
-    (is (= #{[true [true 10 :attr1]]} ((eval e) (content-of (sexp-as-element [:udr {:attr1 10}])) predef-types {} {})))
-    (is (= #{[true [false 128 :attr1]]} ((eval e) (content-of (sexp-as-element [:udr {:attr1 128}])) predef-types {} {})))
+    (is (= [true #{[true [true 10 :attr1]]}] ((eval e) (content-of (sexp-as-element [:udr {:attr1 10}])) predef-types {} {})))
+    (is (= [true #{[true [false 128 :attr1]]}] ((eval e) (content-of (sexp-as-element [:udr {:attr1 128}])) predef-types {} {})))
 ))    
             
 
@@ -376,10 +375,10 @@
 		<element name=\"udr\" type=\"cp\">
 		  </element>
     </schema>")]
-    (is (= [true #{[true]} [[true 0 :test]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [[true 36 :test]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [[false 128 :test]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [[false -129 :test]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [[true 0 :test]]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [[true 36 :test]]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [[false 128 :test]]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [[false -129 :test]]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
     
     ))
 
@@ -428,7 +427,7 @@
                                   [:sequence
                                    [:element {:name "seq1" :type "positiveInteger"}]
                                    ]]]]))]
-      (is (= [true [true #{[true]} [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr [:seq1 1]]) predef-types {} {})))
+      (is (= [true #{[true]} [true [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr [:seq1 1]]) predef-types {} {})))
       ))
 
 (deftest test-inline-element-with-seq-and-two-attrs
@@ -441,7 +440,8 @@
                                    ]
                                   [:attribute {:name "attr1" :type "byte"}]
                                   [:attribute {:name "attr2" :type "string"}]]]]))]
-      (is (= [true [true #{[true [true 10 :attr1][true "hej" :attr2]]} [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]]) predef-types {} {})))
+      (is (= [true #{[true [true 10 :attr1][true "hej" :attr2]]} [true [[true 1 :seq1]]] :udr] 
+             (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]]) predef-types {} {})))
       ))
 
  

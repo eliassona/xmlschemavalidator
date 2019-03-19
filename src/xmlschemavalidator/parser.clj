@@ -147,7 +147,7 @@
     (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element))))
   ([name the-fn]
     (let [name (keyword name)]
-      (with-meta {name (fn-of [true (apply-of the-fn) name])} {:kind :element}))))
+      (with-meta {name (fn-of `(conj ~(apply-of the-fn) ~name))} {:kind :element}))))
 
 (defn types->clj [& maps]
   (let [types (filter type? maps)
@@ -185,18 +185,19 @@
 
 (defn attr->clj [attrs]
   (fn-of 
-     `#{ 
-         (conj
-           (map 
-            (fn [e#] (conj 
-                       (((key e#) ~attrs) 
-                         (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
-            (meta ~'value)) true)}))
+     `[true 
+       #{ 
+          (conj
+            (map 
+             (fn [e#] (conj 
+                        (((key e#) ~attrs) 
+                          (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
+             (meta ~'value)) true)}]))
 
 (defn coll->clj [coll attrs]
   (fn-of
     `(let [coll-res# (~coll ~'value ~'types ~'attr-groups ~'elements)]
-       [(first coll-res#) ~(apply-of (attr->clj attrs)) (second coll-res#)])))
+       [true (second ~(apply-of (attr->clj attrs))) coll-res#])))
 
 (defprotocol IComplexType
   (complex-type->clj [attrs] [o1 o2] [o1 o2 o3])
