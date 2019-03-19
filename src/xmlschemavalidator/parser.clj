@@ -1,7 +1,7 @@
 (ns xmlschemavalidator.parser
   (:use [clojure.pprint])
   (:require [instaparse.core :as insta]
-            [xmlschemavalidator.core :refer [dbg fn-of 
+            [xmlschemavalidator.core :refer [dbg fn-of parse-xml 
                                              apply-of predef-types 
                                              to-str def-base
                                              throw-if-false
@@ -165,13 +165,14 @@
 (defn container->clj [m cond-fn]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
-          [~(cond-fn m 'value) 
-           (map 
-             #(if-let 
-                [e# (~'elements (:tag %))] 
-                (e# (content-of %) ~'types ~'attr-groups ~'elements)
-                [false :undefined (:tag %)]
-                ) ~'value)])))
+          (conj 
+             (map 
+               #(if-let 
+                  [e# (~'elements (:tag %))] 
+                  (e# (content-of %) ~'types ~'attr-groups ~'elements)
+                  [false :undefined (:tag %)]
+                  ) ~'value) 
+             ~(cond-fn m 'value)))))
 
 (defn sequence-cond->clj [m value] `(= (keys ~m) (map :tag ~value)))
 
@@ -262,3 +263,35 @@
     (eval (validation-expr-of schema start)))
   ([schema]
     (eval (validation-expr-of schema))))
+
+
+
+(defprotocol IHiccupWithMeta
+  (to-hiccup-meta [o]))
+
+(defn to-map-with-meta [acc e]
+  (let [[k v] e] 
+    (vary-meta (assoc acc k v) merge (meta e))))
+
+(extend-protocol IHiccupWithMeta
+  nil
+  (to-hiccup-meta [_] nil)
+  java.util.List
+  (to-hiccup-meta [l]
+    (if (set? (second l))
+      (let [[status attrs content tag] l] 
+        (with-meta [tag (to-hiccup-meta attrs) (to-hiccup-meta content) ] {tag status}))
+      (let [[status content tag] l] 
+        (if (nil? tag)
+          (to-hiccup-meta content)
+          (with-meta [tag (to-hiccup-meta content) ] {tag status})))))
+  java.util.Set
+  (to-hiccup-meta [s]
+    (reduce to-map-with-meta {} (map (fn [[status value tag]] (with-meta [tag value] {tag status})) (-> s first rest))))
+  Object
+  (to-hiccup-meta [o] o))
+
+(defn decode [schema value]
+  (let [schema (validation-fn-of schema)]
+    (-> value parse-xml (schema predef-types {} {}) to-hiccup-meta)))
+

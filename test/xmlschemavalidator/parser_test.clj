@@ -292,11 +292,11 @@
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
 		       </sequence>" :SEQUENCE)]
-    (is (= [true [[true 1 :seq1] [true "adsf" :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>adsf</seq2></udr>")) predef-types {} {})))
-    (is (= [false [[false 2 :seq2] [false "asdf" :seq1]]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>asdf</seq1></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    (is (= [true [true 1 :seq1] [true "adsf" :seq2]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>adsf</seq2></udr>")) predef-types {} {})))
+    (is (= [false [false 2 :seq2] [false "asdf" :seq1]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>asdf</seq1></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
     ))
 
 (deftest test-all 
@@ -305,11 +305,11 @@
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
 		       </all>" :ALL)]
-    (is (= [true [[true 1 :seq1][true "asdf" :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>asdf</seq2></udr>")) predef-types {} {})))
-    (is (= [true [[true "asdf" :seq2][true 10 :seq1]]] (f (:content (parse-str "<udr><seq2>asdf</seq2><seq1>10</seq1></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    (is (= [true [true 1 :seq1][true "asdf" :seq2]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>asdf</seq2></udr>")) predef-types {} {})))
+    (is (= [true [true "asdf" :seq2][true 10 :seq1]] (f (:content (parse-str "<udr><seq2>asdf</seq2><seq1>10</seq1></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
     ))
 (deftest test-choice 
   (let [f (validation-fn-of 
@@ -317,12 +317,12 @@
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
 		       </choice>" :CHOICE)]
-    (is (= [false [[true 1 :seq1] [false 2 :seq2]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-types {} {})))
-    (is (= [false [[false 2 :seq2] [true 1 :seq1]]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-types {} {})))
-    (is (= [true [[true 1 :seq1]]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
-    (is (= [true [[true "asdf" :seq2]]] (f (:content (parse-str "<udr><seq2>asdf</seq2></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
-    (is (= [false [[true 1 :seq1] [false :undefined :seq3]]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false 2 :seq2]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2></udr>")) predef-types {} {})))
+    (is (= [false [false 2 :seq2] [true 1 :seq1]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [true [true 1 :seq1]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
+    (is (= [true [true "asdf" :seq2]] (f (:content (parse-str "<udr><seq2>asdf</seq2></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
     ))
 
 
@@ -338,7 +338,7 @@
              </complexType>" :COMPLEXTYPE)]
     (is (= :type (-> e meta :kind)))
     (is (= [true #{[true [true "usa" :country] [true 13672 :zip]]} 
-            [true [[true "hej" :seq1] [true "bla" :seq2]]]] 
+            [true [true "hej" :seq1] [true "bla" :seq2]]] 
            ((-> e eval first val) (content-of (sexp-as-element [:udr {:country "usa", :zip 13672} [:seq1 "hej"][:seq2 "bla"]])) predef-types {} {})))
     
     ))
@@ -359,7 +359,6 @@
     (is (= [true 0 :hej] (f (sexp-as-element [:hej 0]) predef-types {} {})))
     (is (= [true 100 :hej] (f (sexp-as-element [:hej 100]) predef-types {} {})))
     (is (= [false 2147483648 :hej] (f (sexp-as-element [:hej 2147483648]) predef-types {} {})))
-    
     )
   )
 
@@ -375,10 +374,10 @@
 		<element name=\"udr\" type=\"cp\">
 		  </element>
     </schema>")]
-    (is (= [true #{[true]} [true [[true 0 :test]]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [[true 36 :test]]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [[false 128 :test]]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [[false -129 :test]]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [true 0 :test]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [true 36 :test]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [false 128 :test]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
+    (is (= [true #{[true]} [true [false -129 :test]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
     
     ))
 
@@ -426,7 +425,7 @@
                  [:sequence
                   [:element {:name "seq1" :type "positiveInteger"}]
                   ]]]])]
-      (is (= [true #{[true]} [true [[true 1 :seq1]]] :udr] (f (sexp-as-element [:udr [:seq1 1]]) predef-types {} {})))
+      (is (= [true #{[true]} [true [true 1 :seq1]] :udr] (f (sexp-as-element [:udr [:seq1 1]]) predef-types {} {})))
       ))
 
 (deftest test-inline-element-with-seq-and-two-attrs
@@ -439,7 +438,7 @@
                   ]
                  [:attribute {:name "attr1" :type "byte"}]
                  [:attribute {:name "attr2" :type "string"}]]]])]
-      (is (= [true #{[true [true 10 :attr1][true "hej" :attr2]]} [true [[true 1 :seq1]]] :udr] 
+      (is (= [true #{[true [true 10 :attr1][true "hej" :attr2]]} [true [true 1 :seq1]] :udr] 
              (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]]) predef-types {} {})))
       ))
 
