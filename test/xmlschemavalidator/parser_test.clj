@@ -344,6 +344,16 @@
     
     ))
 
+(deftest test-inline-complex-type
+  (let [e (validation-expr-of 
+            (sexp-as-element [:complexType 
+                             [:attribute {:name "attr1" :type "byte"}]]) :COMPLEXTYPE)]
+    (is (= nil (-> e meta :kind)))
+    (is (= #{[true 10 :attr1]} ((eval e) (content-of (sexp-as-element [:udr {:attr1 10}])) predef-types {} {})))
+    (is (= #{[false 128 :attr1]} ((eval e) (content-of (sexp-as-element [:udr {:attr1 128}])) predef-types {} {})))
+))    
+            
+
 (deftest test-simple-element
   (let [f (validation-fn-of
             (sexp-as-element [:schema [:element {:name "hej" :type "int"}]]))]
@@ -392,21 +402,16 @@
    ))
     
 (deftest test-inline-element
-  #_(let [f (validation-fn-of
-             (sexp-as-element [:schema 
-                               [:element {:name "hej"} 
-                                [:complexType 
-                                 [:attribute {:name "attr1" :type "byte"}]]]]))]
-     (is (= [true #{[true 10 :attr1]}] (f (sexp-as-element [:hej {:attr1 10}]) predef-types {} {})))
-     ))
+  (let [f (validation-fn-of
+            (sexp-as-element [:schema 
+                              [:element {:name "udr"} 
+                               [:complexType 
+                                [:attribute {:name "attr1" :type "byte"}]]]]))]
+    (is (= [true #{[true 10 :attr1]} :udr] (f (sexp-as-element [:udr {:attr1 10}]) predef-types {} {})))
+    ))
 
  (comment
    (validation-expr-of 
    (sexp-as-element [:schema [:element {:name "hej"} 
                               [:complexType 
                                [:attribute {:name "attr1" :type "int"}]]]])))
-
-
-
-
-
