@@ -279,8 +279,11 @@
   java.util.List
   (to-hiccup-meta [l]
     (if (set? (second l))
-      (let [[status attrs content tag] l] 
-        (with-meta [tag (to-hiccup-meta attrs) (to-hiccup-meta content) ] {tag status}))
+      (let [[status attrs content tag] l
+            a (to-hiccup-meta attrs)]
+        (if (empty? a)
+          (with-meta [tag (to-hiccup-meta content) ] {tag status})
+          (with-meta [tag a (to-hiccup-meta content) ] {tag status})))
       (let [[status content tag] l] 
         (if (nil? tag)
           (to-hiccup-meta content)

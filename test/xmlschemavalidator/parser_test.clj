@@ -345,8 +345,8 @@
 
 (deftest test-inline-complex-type
   (let [e (validation-expr-of 
-            (sexp-as-element [:complexType 
-                             [:attribute {:name "attr1" :type "byte"}]]) :COMPLEXTYPE)]
+            [:complexType 
+            [:attribute {:name "attr1" :type "byte"}]] :COMPLEXTYPE)]
     (is (= nil (-> e meta :kind)))
     (is (= [true #{[true [true 10 :attr1]]}] ((eval e) (content-of (sexp-as-element [:udr {:attr1 10}])) predef-types {} {})))
     (is (= [true #{[true [false 128 :attr1]]}] ((eval e) (content-of (sexp-as-element [:udr {:attr1 128}])) predef-types {} {})))
@@ -359,25 +359,29 @@
     (is (= [true 0 :hej] (f (sexp-as-element [:hej 0]) predef-types {} {})))
     (is (= [true 100 :hej] (f (sexp-as-element [:hej 100]) predef-types {} {})))
     (is (= [false 2147483648 :hej] (f (sexp-as-element [:hej 2147483648]) predef-types {} {})))
+    (let [res (decode [:schema [:element {:name "hej" :type "int"}]] [:hej 0])]
+      (is (= [:hej 0] res))
+      (is (= {:hej true} (meta res))))
     )
   )
 
 
-(deftest test-element-with-complex-type 
-  (let [f (validation-fn-of 
-    "<schema>
-     <complexType name=\"cp\">
-       <sequence>
-         <element name=\"test\" type=\"byte\"/>
-       </sequence>
-     </complexType>
-		<element name=\"udr\" type=\"cp\">
-		  </element>
-    </schema>")]
-    (is (= [true #{[true]} [true [true 0 :test]] :udr] (f (parse-str "<udr><test>0</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [true 36 :test]] :udr] (f (parse-str "<udr><test>36</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [false 128 :test]] :udr] (f (parse-str "<udr><test>128</test></udr>") predef-types {} {})))
-    (is (= [true #{[true]} [true [false -129 :test]] :udr] (f (parse-str "<udr><test>-129</test></udr>") predef-types {} {})))
+(deftest test-element-with-complex-type
+  (let [he [:schema 
+            [:complexType {:name "cp"}
+             [:sequence
+              [:element {:name "test", :type "byte"}]]]
+            [:element {:name "udr", :type "cp"}]]
+       f (validation-fn-of he)]                                      
+    (is (= [true #{[true]} [true [true 0 :test]] :udr] (f (sexp-as-element [:udr [:test 0]]) predef-types {} {})))
+    (is (= [true #{[true]} [true [true 36 :test]] :udr] (f (sexp-as-element [:udr [:test 36]]) predef-types {} {})))
+    (is (= [true #{[true]} [true [false 128 :test]] :udr] (f (sexp-as-element [:udr [:test 128]]) predef-types {} {})))
+    (is (= [true #{[true]} [true [false -129 :test]] :udr] (f (sexp-as-element [:udr [:test -129]]) predef-types {} {})))
+    (let [res (decode he [:udr [:test 0]])]
+      (is (= [:udr [:test 0]] res))
+      (is (= {:udr true} (meta res)))
+      (is (= {:test true} (meta (second res))))
+      )
     
     ))
 
