@@ -40,7 +40,8 @@
                  NOTATION = OPEN-PAREN ':notation' SPACE OPEN-BRACKET NAME-ATTR <','> SPACE ':public' SPACE STRING CLOSE-BRACKET CLOSE-PAREN
                  TYPES = ((TYPE OPTIONAL-SPACE)* | TYPE)
                  <TYPE> = (SIMPLETYPE | COMPLEXTYPE | ELEMENT | ATTRIBUTEGROUP | ATTRIBUTE)
-                 ELEMENT = OPEN-PAREN <':element'> SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE)) CLOSE-PAREN
+                 ELEMENT = OPEN-PAREN <':element'> SPACE (NAME-TYPE-ATTR | (NAME-ATTR SPACE TYPE) | REF-ATTR) CLOSE-PAREN
+                 REF-ATTR = OPEN-BRACKET <':ref'> SPACE SYMBOL CLOSE-BRACKET
                  COMPLEXTYPE = OPEN-PAREN <':complexType'> SPACE ((NAME-ATTR SPACE COMPLEXTYPE-BODY) | COMPLEXTYPE-BODY) CLOSE-PAREN
                  <COMPLEXTYPE-BODY> = [ANNOTATION] (SIMPLECONTENT | CONTENT | [COLLECTION]) OPTIONAL-SPACE ATTRIBUTES
                  <COLLECTION> = SEQUENCE | ALL | GROUP | CHOICE
@@ -145,8 +146,10 @@
   
 (defn element->clj 
   ([m]
-  (let [name (-> m meta :name)]
-    (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element))))
+    (if (and (vector? m) (= (first m) :ref))
+      (fn-of `((~'elements ~(-> m second keyword)) ~'types ~'attr-groups ~'elements))
+      (let [name (-> m meta :name)]
+        (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element)))))
   ([name the-fn]
     (let [name (keyword name)]
       (with-meta {name (fn-of `(conj ~(apply-of the-fn) ~name))} {:kind :element}))))
@@ -246,6 +249,7 @@
    :ALL all->clj
    :COMPLEXTYPE complex-type->clj
    :ATTRIBUTES (fn [& args] (apply merge args))
+   :REF-ATTR (fn [_ name] [:ref name])
    }
   )
 

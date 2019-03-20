@@ -447,3 +447,14 @@
       ))
 
  
+(deftest test-ref
+  (let [he [:schema 
+            [:element {:name "udr"} 
+             [:complexType
+              [:sequence
+               [:element {:name "seq1" :type "positiveInteger"}]
+               ]
+              [:attribute {:name "attr1" :type "byte"}]
+              [:attribute {:name "attr2" :type "string"}]]]
+            [:element {:ref :udr}]]]
+    (validation-expr-of he)))
