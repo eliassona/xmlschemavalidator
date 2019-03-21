@@ -8,7 +8,7 @@ Work in progress!!
 
 ```clojure
 (ns example.core
-  (:require [xmlschemavalidator.core :refer [decode valid?]]))
+  (:require [xmlschemavalidator.parser :refer [decode valid? with-status]]))
   
 ```
 
@@ -46,7 +46,8 @@ And decode...
 
 ```clojure
 => (decode schema "<udr><uniontest>0</uniontest></udr>")
-{:udr {:uniontest 0}}
+[:udr [:uniontest 0]]
+
 ```
 To find out if the decode is valid
 
@@ -54,7 +55,7 @@ To find out if the decode is valid
 => (meta (decode schema "<udr><uniontest>0</uniontest></udr>"))
 {:udr true} ;udr level is valid
 
-=> (-> (decode schema "<udr><uniontest>0</uniontest></udr>") :udr meta)
+=> (-> (decode schema "<udr><uniontest>0</uniontest></udr>") second meta)
 {:uniontest false} ;uniontest level invalid due to the intrange type and its restriction 
 ```
 
@@ -63,7 +64,7 @@ You could pre-compile the schema by applying partial on the schema
 ```clojure
 => (def d (partial decode schema))
 => (d "<udr><uniontest>0</uniontest></udr>")
-{:udr {:uniontest 0}}
+[:udr [:uniontest 0]]
 ```
 Check the whole decoding was valid
 
@@ -86,11 +87,16 @@ You could also use the sexp-as-element format instead of xml strings as argument
 true
 ```
 
+You could decorate the decoded data with the status with ```clojure with-status ```
+```clojure
+=> (with-status (d [:udr [:uniontest "medium"]]))
+[:udr [:uniontest {:value "medium", :status true}]]
 
-## The following tags are missing (and maybe more)
-* ref
+```
+
+## The following tags have not been implemented yet (and maybe more)
 * simpleContext
-* attribute
+* complexContent
 * attributeGroup
 
 
