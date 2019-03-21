@@ -3,17 +3,28 @@
   (:require [instaparse.core :as insta]
             [xmlschemavalidator.core :refer [dbg fn-of parse-xml 
                                              apply-of predef-types 
-                                             to-str def-base
+                                             def-base
                                              throw-if-false
                                              type? element?]]
             [clojure.data.xml :refer [parse-str sexp-as-element]]))
 
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
+
+(defn special-read-string [s]
+  (try 
+    (let [v (read-string s)]
+      (if (number? v)
+        v
+        s))
+    (catch Exception e
+      s))
+    )
+
 (defn content-of [value]
   (let [content (:content value)]
     (if (simple-type? content)
-      (-> content first read-string to-str)
+      (-> content first special-read-string)
       (with-meta content (:attrs value)))))
 
 (defn attrs-of [attrs content]
@@ -77,7 +88,7 @@
                  BASE-ATTR = OPEN-BRACKET <':base'> SPACE SYMBOL CLOSE-BRACKET
                  RESTRICTION_BODIES = ((RESTRICTION-BODY SPACE)* RESTRICTION-BODY)
                  RESTRICTION-BODY = OPEN-PAREN RESTRICTION-KWS SPACE OPEN-BRACKET <':value'> SPACE STRING CLOSE-BRACKET CLOSE-PAREN
-                 RESTRICTION-KWS = ':enumeration' | ':minInclusive' | ':maxInclusive' | ':minExclusive' | ':maxExclusive' | ':pattern'
+                 RESTRICTION-KWS = ':enumeration' | ':minInclusive' | ':maxInclusive' | ':minExclusive' | ':maxExclusive' | ':pattern' | ':length' | ':minLength' | ':maxLength'
                  <OPEN-PAREN> = <'('>
                  <CLOSE-PAREN> = <')'>
                  <OPEN-BRACKET> = <'{'>
@@ -102,6 +113,7 @@
   (xml->hiccup [xml-syntax] (-> xml-syntax element->hiccup str)))
 
 (defn math-expr-of [op value] (with-meta (fn-of `(~op ~'value ~value)) {:kind :range}))
+(defn length-expr-of [op value] (with-meta (fn-of `(~op (count (str ~'value)) ~value)) {:kind :range}))
 
 (defn restriction->clj [tag value]
     (condp = tag
@@ -111,6 +123,18 @@
      (math-expr-of `>= value)
      :maxInclusive
      (math-expr-of `<= value)
+     :minExclusive
+     (math-expr-of `> value)
+     :maxExclusive
+     (math-expr-of `< value)
+     :length 
+     (length-expr-of '= value)
+     :minLength 
+     (length-expr-of '> value)
+     :maxLength 
+     (length-expr-of '> value)
+     :pattern
+     (with-meta (fn-of `(.matches ~'value ~(format "%s" value))) {:kind :pattern})
      ))
 
 (defn enumeration? [args] (every? #(= (-> % meta :kind) :enumeration) args))
@@ -148,7 +172,7 @@
   ([m]
     (if (and (vector? m) (= (first m) :ref))
       (let [name (-> m second keyword)]
-        (with-meta {name (fn-of `((~'elements ~name) (dbg (-> ~'value :content)) ~'types ~'attr-groups ~'elements))} (assoc (meta m) :kind :element)))
+        (with-meta {name (fn-of `((~'elements ~name) (-> ~'value :content) ~'types ~'attr-groups ~'elements))} (assoc (meta m) :kind :element)))
       (let [name (-> m meta :name)]
         (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element)))))
   ([name the-fn]
@@ -198,7 +222,7 @@
             (map 
              (fn [e#] (conj 
                         (((key e#) ~attrs) 
-                          (-> e# val read-string to-str) ~'types ~'attr-groups ~'elements) (key e#))) 
+                          (-> e# val special-read-string) ~'types ~'attr-groups ~'elements) (key e#))) 
              (meta ~'value)) true)}]))
 
 (defn coll->clj [coll attrs]
@@ -230,7 +254,7 @@
    :NAME (fn [& args] (apply str args))
    :NAME-TYPE-ATTR name-type->clj
    :NAME-ATTR name->clj
-   :STRING #(-> % read-string to-str)
+   :STRING #(-> % special-read-string)
    :RESTRICTION-KWS identity
    :RESTRICTION-BODY (fn [tag value] (restriction->clj (read-string tag) value))
    :RESTRICTION_BODIES restrictions->clj 

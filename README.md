@@ -87,7 +87,7 @@ You could also use the sexp-as-element format instead of xml strings as argument
 true
 ```
 
-You could decorate the decoded data with the status with ```clojure with-status ```
+You could decorate the decoded data with the status with with-status
 ```clojure
 => (with-status (d [:udr [:uniontest "medium"]]))
 [:udr [:uniontest {:value "medium", :status true}]]
@@ -98,6 +98,7 @@ You could decorate the decoded data with the status with ```clojure with-status 
 * simpleContext
 * complexContent
 * attributeGroup
+* list
 
 
 ## License

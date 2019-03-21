@@ -117,7 +117,7 @@
 (defn simple-type? [value]
   (and (= (count value) 1) (not (map? (first value)))))
 
-(defn to-str [v] (if (symbol? v) (str v) v))
+(defn to-str [v] (if (symbol? (dbg v)) (str v) v))
 
 (defn content-of [value]
   (let [value (:content value)]

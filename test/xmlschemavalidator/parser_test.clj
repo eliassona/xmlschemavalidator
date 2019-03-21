@@ -181,6 +181,22 @@
 	  (is (= [false 43] (f 43 predef-types {} {})))
   ))
 
+(deftest test-length-restriction
+  (let [f(validation-fn-of [:restriction {:base "string"}
+                            [:length {:value 10}]] :RESTRICTION)]
+    (is (= [true "1234567890"] (f "1234567890" predef-types {} {})))
+    (is (= [false "123456789"] (f "123456789" predef-types {} {})))
+    (is (= [false "1234567890a"] (f "1234567890a" predef-types {} {})))
+    ))
+
+(deftest test-pattern-restriction
+  (let [f(validation-fn-of [:restriction {:base "string"}
+                       [:pattern {:value "[A-Z][A-Z][A-Z]"}]] :RESTRICTION)]
+    (is (= [true "ABC"] (f "ABC" predef-types {} {})))
+    (is (= [true "XYZ"] (f "XYZ" predef-types {} {})))
+    (is (= [false "aBC"] (f "aBC" predef-types {} {})))
+    ))
+
 (deftest test-anon-simple-type
   (let [f (validation-fn-of 
             "<simpleType>
