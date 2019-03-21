@@ -433,17 +433,21 @@
       ))
 
 (deftest test-inline-element-with-seq-and-two-attrs
-  (let [f (validation-fn-of
-              [:schema 
+  (let [schema [:schema 
                [:element {:name "udr"} 
                 [:complexType
                  [:sequence
                   [:element {:name "seq1" :type "positiveInteger"}]
                   ]
                  [:attribute {:name "attr1" :type "byte"}]
-                 [:attribute {:name "attr2" :type "string"}]]]])]
+                 [:attribute {:name "attr2" :type "string"}]]]]
+        f (validation-fn-of schema)]
       (is (= [true #{[true [true 10 :attr1][true "hej" :attr2]]} [true [true 1 :seq1]] :udr] 
              (f (sexp-as-element [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]]) predef-types {} {})))
+      (let [res (decode schema [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]])]
+        (is (= [:udr {:attr1 10, :attr2 "hej"} [:seq1 1]] res))
+        (is (= [:udr {:attr1 {:value 10, :status true} :attr2 {:value "hej", :status true}} [:seq1 {:value 1, :status true}]] (with-status res)))
+        )
       ))
 
  
@@ -465,209 +469,30 @@
       (is (= {:udr true} (meta res)))
       (is (= {:theref true} (meta (second res))))
       (is (= {:seq1 true} (meta (second (second res)))))
+      (is (= [:udr [:theref [:seq1 {:value 1, :status true}]]] (with-status res)))
       ) 
       ))
 
-(def f (clojure.core/fn
- [value types attr-groups elements]
- (clojure.core/let
-  [types
-   (clojure.core/merge nil types)
-   elements
-   (clojure.core/merge
-    {:theref
-     (clojure.core/fn
-      [value types attr-groups elements]
-      (clojure.core/conj
-       ((clojure.core/fn
-         [value types attr-groups elements]
-         (clojure.core/let
-          [coll-res__21966__auto__
-           ((clojure.core/fn
-             [value types attr-groups elements]
-             (clojure.core/let
-              [elements
-               (clojure.core/merge
-                {:seq1
-                 (clojure.core/fn
-                  [value types attr-groups elements]
-                  (clojure.core/conj
-                   ((clojure.core/fn
-                     [value types attr-groups elements]
-                     ((types "positiveInteger")
-                      value
-                      types
-                      attr-groups
-                      elements))
-                    value
-                    types
-                    
-attr-groups
-                    elements)
-                   :seq1))}
-                elements)]
-              (clojure.core/conj
-               (clojure.core/map
-                (fn*
-                 [p1__21954__21955__auto__]
-                 (clojure.core/if-let
-                  [e__21956__auto__
-                   (elements (:tag p1__21954__21955__auto__))]
-                  (e__21956__auto__
-                   (xmlschemavalidator.parser/content-of
-                    p1__21954__21955__auto__)
-                   types
-                   attr-groups
-                   elements)
-                  [false :undefined (:tag p1__21954__21955__auto__)]))
-                value)
-               (clojure.core/=
-                (clojure.core/keys
-                 {:seq1
-                  (clojure.core/fn
-                   [value types attr-groups elements]
-                   (clojure.core/conj
-                    ((clojure.core/fn
-                      [value types attr-groups elements]
-                      ((types
- "positiveInteger")
-                       value
-                       types
-                       attr-groups
-                       elements))
-                     value
-                     types
-                     attr-groups
-                     elements)
-                    :seq1))})
-                (clojure.core/map :tag value)))))
-            value
-            types
-            attr-groups
-            elements)]
-          [true
-           (clojure.core/second
-            ((clojure.core/fn
-              [value types attr-groups elements]
-              [true
-               #{(clojure.core/conj
-                  (clojure.core/map
-                   (clojure.core/fn
-                    [e__21964__auto__]
-                    (clojure.core/conj
-                     (((clojure.core/key e__21964__auto__) nil)
-                      (clojure.core/->
-                       e__21964__auto__
-                       clojure.core/val
-                       clojure.core/read-string
-                       xmlschemavalidator.core/to-str
-)
-                      types
-                      attr-groups
-                      elements)
-                     (clojure.core/key e__21964__auto__)))
-                   (clojure.core/meta value))
-                  true)}])
-             value
-             types
-             attr-groups
-             elements))
-           coll-res__21966__auto__]))
-        value
-        types
-        attr-groups
-        elements)
-       :theref)),
-     :udr
-     (clojure.core/fn
-      [value types attr-groups elements]
-      (clojure.core/conj
-       ((clojure.core/fn
-         [value types attr-groups elements]
-         (clojure.core/let
-          [coll-res__21966__auto__
-           ((clojure.core/fn
-             [value types attr-groups elements]
-             (clojure.core/let
-              [elements
-               (clojure.core/merge
-                {:theref
-                 (clojure.core/fn
-                  [value types attr-groups elements]
-                  ((elements :theref)
-                   value
-                   
-types
-                   attr-groups
-                   elements))}
-                elements)]
-              (clojure.core/conj
-               (clojure.core/map
-                (fn*
-                 [p1__21954__21955__auto__]
-                 (clojure.core/if-let
-                  [e__21956__auto__
-                   (elements (:tag p1__21954__21955__auto__))]
-                  (e__21956__auto__
-                   (xmlschemavalidator.parser/content-of
-                    p1__21954__21955__auto__)
-                   types
-                   attr-groups
-                   elements)
-                  [false :undefined (:tag p1__21954__21955__auto__)]))
-                value)
-               (clojure.core/=
-                (.keySet
-                 {:theref
-                  (clojure.core/fn
-                   [value types attr-groups elements]
-                   ((elements :theref)
-                    value
-                    types
-                    attr-groups
-                    elements))})
-                
-(clojure.core/set (clojure.core/map :tag value))))))
-            value
-            types
-            attr-groups
-            elements)]
-          [true
-           (clojure.core/second
-            ((clojure.core/fn
-              [value types attr-groups elements]
-              [true
-               #{(clojure.core/conj
-                  (clojure.core/map
-                   (clojure.core/fn
-                    [e__21964__auto__]
-                    (clojure.core/conj
-                     (((clojure.core/key e__21964__auto__) nil)
-                      (clojure.core/->
-                       e__21964__auto__
-                       clojure.core/val
-                       clojure.core/read-string
-                       xmlschemavalidator.core/to-str)
-                      types
-                      attr-groups
-                      elements)
-                     (clojure.core/key e__21964__auto__)))
-                   (clojure.core/meta value))
-                  true)}])
-             value
-             types
-             
-attr-groups
-             elements))
-           coll-res__21966__auto__]))
-        value
-        types
-        attr-groups
-        elements)
-       :udr))}
-    elements)]
-  ((elements (:tag value))
-   (xmlschemavalidator.parser/content-of value)
-   types
-   attr-groups
-   elements))))
+(deftest test-nested-complex-inline
+  (let [schema 
+        [:schema 
+         [:element {:name "part1"}
+          [:complexType
+           [:sequence
+            [:element {:name "nameList"}
+             [:complexType
+              [:sequence
+               [:element {:name "name"}
+                [:simpleType
+                  [:union
+                   [:simpleType
+                    [:restriction {:base "string"}
+                     [:enumeration {:value "small"}]
+                     [:enumeration {:value "medium"}]
+                     [:enumeration {:value "large"}]]]]]]]]]]]]]]
+    
+     (is (= [:part1 [:nameList [:name "small"]]] (decode schema [:part1 [:nameList [:name "small"]]])))
+     (is (= true (valid? (decode schema [:part1 [:nameList [:name "small"]]]))))
+     (is (= [:part1 [:nameList [:name "asdf"]]] (decode schema [:part1 [:nameList [:name "asdf"]]])))
+     (is (= false (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
+     ))

@@ -303,3 +303,28 @@
   (let [schema (validation-fn-of schema)]
     (-> value parse-xml (schema predef-types {} {}) to-hiccup-meta)))
 
+(defn valid? [value]
+  (letfn [(valid?-fn [value] 
+            (let [n (rest value)
+                  m (vals (meta value))]
+                (concat m (map valid?-fn (filter coll? n)))))]
+     (every? identity (flatten (valid?-fn value)))))
+
+(defprotocol IWithStatus
+  (with-status [v status] [v]))
+
+(extend-protocol IWithStatus
+  clojure.lang.PersistentVector
+  (with-status 
+    ([v _] (mapv #(with-status % ((meta v) (first v))) v))
+    ([v] (with-status v nil)))
+  clojure.lang.Keyword
+  (with-status [v _] v)
+  String
+  (with-status [v status] {:value v, :status status})
+  java.util.Map
+  (with-status [v _] (into {} (map (fn [e] [(key e) (with-status (val e) ((meta v) (key e)))]) v)))
+  Number
+  (with-status [v status] {:value v, :status status})
+  )
+
