@@ -147,7 +147,8 @@
 (defn element->clj 
   ([m]
     (if (and (vector? m) (= (first m) :ref))
-      (fn-of `((~'elements ~(-> m second keyword)) ~'types ~'attr-groups ~'elements))
+      (let [name (-> m second keyword)]
+        (with-meta {name (fn-of `((~'elements ~name) (dbg (-> ~'value :content)) ~'types ~'attr-groups ~'elements))} (assoc (meta m) :kind :element)))
       (let [name (-> m meta :name)]
         (with-meta {name (fn-of `(conj ~(apply-of (m name)) ~name))} (assoc (meta m) :kind :element)))))
   ([name the-fn]
