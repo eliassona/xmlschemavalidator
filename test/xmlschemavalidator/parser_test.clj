@@ -511,4 +511,5 @@
      (is (= true (valid? (decode schema [:part1 [:nameList [:name "small"]]]))))
      (is (= [:part1 [:nameList [:name "asdf"]]] (decode schema [:part1 [:nameList [:name "asdf"]]])))
      (is (= false (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
+     (is (= [:part1 [:nameList [:name {:value "asdf", :status false}]]] (with-status (decode schema [:part1 [:nameList [:name "asdf"]]]))))
      ))
