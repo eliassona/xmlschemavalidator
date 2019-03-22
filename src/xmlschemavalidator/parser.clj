@@ -249,6 +249,42 @@
     ([attrs]
       (attr->clj attrs))))
 
+(defn attr-name-type->clj 
+  ([name type]
+    (name-type->clj name type))
+  ([name type kind kind-value]
+    (condp = (read-string kind)
+      :default
+      (let [name (keyword name)]
+        (with-meta 
+          {name 
+           (fn-of 
+             `(if (nil? ~'value)
+                ((~'types ~type) ~kind-value ~'types ~'attr-groups ~'elements)
+                ~(apply-of `(~'types ~type))))} 
+          {:name name}))
+      :fixed
+      (let [name (keyword name)]
+        (with-meta 
+          {name 
+           (fn-of 
+             `(if (not= ~'value ~kind-value)
+                [false ~'value]
+                ~(apply-of `(~'types ~type))))} 
+          {:name name}))
+      :use
+      (let [name (keyword name)]
+        (with-meta 
+          {name 
+           (fn-of 
+             `(if (nil? ~'value)
+                [false :undefined]
+                ~(apply-of `(~'types ~type))))} 
+          {:name name}))      
+      )))
+  
+    
+
 (def ast->clj-map
   {:SYMBOL (fn [& args] (apply str args))
    :NAME (fn [& args] (apply str args))
@@ -268,7 +304,7 @@
    :SCHEMA identity
    :ELEMENTS elements->clj
    :SEQUENCE sequence->clj
-   :ATTRIBUTE-NAME-TYPE name-type->clj
+   :ATTRIBUTE-NAME-TYPE attr-name-type->clj
    :ATTRIBUTE identity
    :CHOICE choice->clj
    :ALL all->clj

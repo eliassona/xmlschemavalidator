@@ -513,3 +513,32 @@
      (is (= false (valid? (decode schema [:part1 [:nameList [:name "asdf"]]]))))
      (is (= [:part1 [:nameList [:name {:value "asdf", :status false}]]] (with-status (decode schema [:part1 [:nameList [:name "asdf"]]]))))
      ))
+
+(deftest test-comple-content
+  (let [schema [:schema
+                [:complexType {:name "personinfo"}
+                 [:sequence
+                  [:element {:name "firstname" :type "string"}]
+                  [:element {:name "lastname" :type "string"}]]]
+                [:complexType {:name "fullpersoninfo"}
+                 [:complexContent
+                  [:extension {:base "personinfo"}
+                   [:sequence
+                    [:element {:name "address" :type "string"}]
+                    [:element {:name "city" :type "string"}]
+                    [:element {:name "country" :type "string"}]]]]]
+                [:element {:name "employee" :type "fullpersoninfo"}]]]
+    ))
+ 
+(deftest test-default-attribute
+  (is (= [true "SV"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :default "EN"}] :ATTRIBUTE)) "SV" predef-types {} {})))
+  (is (= [true "EN"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :default "EN"}] :ATTRIBUTE)) nil predef-types {} {})))
+  )
+(deftest test-fixed-attribute
+  (is (= [true "EN"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :fixed "EN"}] :ATTRIBUTE)) "EN" predef-types {} {})))
+  (is (= [false "SV"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :fixed "EN"}] :ATTRIBUTE)) "SV" predef-types {} {})))
+  )
+(deftest test-use-attribute
+  (is (= [true "EN"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :use "required"}] :ATTRIBUTE)) "EN" predef-types {} {})))
+  (is (= [false :undefined] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :use "required"}] :ATTRIBUTE)) nil predef-types {} {})))
+  )
