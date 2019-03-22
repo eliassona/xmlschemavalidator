@@ -160,9 +160,10 @@
 
 (defn union->clj [& fns] (fn-of (add-try-catch fns)))
 
-(defn name-type->clj [name type]
-  (let [name (keyword name)]
-    (with-meta {name (fn-of (apply-of `(~'types ~type)))} {:name name})))
+(defmacro def-attr [name expr]
+  `(with-meta {~name (fn-of ~expr)} {:name ~name}))
+
+(defn name-type->clj [name type] (def-attr (keyword name) (apply-of `(~'types ~type))))
 
 (defn name->clj [name]
   (let [name name]
@@ -249,39 +250,28 @@
     ([attrs]
       (attr->clj attrs))))
 
+
 (defn attr-name-type->clj 
   ([name type]
     (name-type->clj name type))
   ([name type kind kind-value]
-    (condp = (read-string kind)
-      :default
-      (let [name (keyword name)]
-        (with-meta 
-          {name 
-           (fn-of 
-             `(if (nil? ~'value)
-                ((~'types ~type) ~kind-value ~'types ~'attr-groups ~'elements)
-                ~(apply-of `(~'types ~type))))} 
-          {:name name}))
-      :fixed
-      (let [name (keyword name)]
-        (with-meta 
-          {name 
-           (fn-of 
-             `(if (not= ~'value ~kind-value)
-                [false ~'value]
-                ~(apply-of `(~'types ~type))))} 
-          {:name name}))
-      :use
-      (let [name (keyword name)]
-        (with-meta 
-          {name 
-           (fn-of 
+    (let [name (keyword name)]
+      (condp = (read-string kind)
+        :default
+        (def-attr name 
+          `(if (nil? ~'value)
+             ((~'types ~type) ~kind-value ~'types ~'attr-groups ~'elements)
+             ~(apply-of `(~'types ~type))))
+        :fixed
+       (def-attr name
+         `(if (not= ~'value ~kind-value)
+            [false ~'value]
+            ~(apply-of `(~'types ~type)))) 
+        :use
+        (def-attr name
              `(if (nil? ~'value)
                 [false :undefined]
-                ~(apply-of `(~'types ~type))))} 
-          {:name name}))      
-      )))
+                ~(apply-of `(~'types ~type))))))))
   
     
 
