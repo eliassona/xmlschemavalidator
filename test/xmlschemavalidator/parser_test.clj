@@ -542,3 +542,20 @@
   (is (= [true "EN"] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :use "required"}] :ATTRIBUTE)) "EN" predef-types {} {})))
   (is (= [false :undefined] ((:language (validation-fn-of [:attribute {:name "language" :type "string" :use "required"}] :ATTRIBUTE)) nil predef-types {} {})))
   )
+
+
+(deftest test-atttributes-logic
+  (let [schema [:schema
+                [:element {:name "udr"}
+                 [:complexType
+                  [:attribute {:name "language", :type "string", :default "SV"}]
+                  [:attribute {:name "attr2", :type "string", :fixed "hej"}]
+                  [:attribute {:name "attr3", :type "string", :use "required"}]]]]
+        f (validation-fn-of schema)]
+    
+    (is (= [true #{[true [true "EN" :language] [true "hej" :attr2] [true "asdf" :attr3]]} :udr] 
+           (f (sexp-as-element [:udr {:language "EN" :attr2 "hej" :attr3 "asdf"}]) predef-types {} {})))
+    (is (= [true #{[true [true "EN" :language] [false "afdsa" :attr2] [false :undefined :attr3]]} :udr] 
+           (f (sexp-as-element [:udr {:language "EN" :attr2 "afdsa"}]) predef-types {} {})))
+    ))
+        

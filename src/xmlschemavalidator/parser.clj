@@ -215,6 +215,8 @@
 
 (defn choice->clj [m] (container->clj m choice-cond->clj))
 
+
+
 (defn attr->clj [attrs]
   (fn-of 
      `[true 
@@ -222,9 +224,9 @@
           (conj
             (map 
              (fn [e#] (conj 
-                        (((key e#) ~attrs) 
-                          (-> e# val special-read-string) ~'types ~'attr-groups ~'elements) (key e#))) 
-             (meta ~'value)) true)}]))
+                        ((e# ~attrs) 
+                          (-> ~'value meta e# special-read-string) ~'types ~'attr-groups ~'elements) e#)) 
+             (keys ~attrs)) true)}]))
 
 (defn coll->clj [coll attrs]
   (fn-of
