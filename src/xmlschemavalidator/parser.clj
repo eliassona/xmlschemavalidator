@@ -335,7 +335,7 @@
   (to-hiccup-meta [_] nil)
   java.util.List
   (to-hiccup-meta [l]
-    (if (set? (second l))
+    (if (and (= (count l) 4) (set? (second l)))
       (let [[status attrs content tag] l
             a (to-hiccup-meta attrs)]
         (if (empty? a)

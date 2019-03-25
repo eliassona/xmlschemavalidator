@@ -557,5 +557,10 @@
            (f (sexp-as-element [:udr {:language "EN" :attr2 "hej" :attr3 "asdf"}]) predef-types {} {})))
     (is (= [true #{[true [true "EN" :language] [false "afdsa" :attr2] [false :undefined :attr3]]} :udr] 
            (f (sexp-as-element [:udr {:language "EN" :attr2 "afdsa"}]) predef-types {} {})))
+    (is (= [:udr {:language "EN", :attr2 "hej", :attr3 "asdf"}] (decode schema [:udr {:language "EN" :attr2 "hej" :attr3 "asdf"}])))
+    (is (=  [:udr {:language {:value "EN", :status true}, :attr2 {:value "hej", :status true}, :attr3 {:value "asdf", :status true}}] (with-status (decode schema [:udr {:language "EN" :attr2 "hej" :attr3 "asdf"}]))))
+    (is (=  [:udr {:language {:value "SV", :status true}, :attr2 {:value "hej", :status true}, :attr3 {:value "asdf", :status true}}] (with-status (decode schema [:udr {:attr2 "hej" :attr3 "asdf"}]))))
+    (is (=  [:udr {:language {:value "SV", :status true}, :attr2 {:value "hej1", :status false}, :attr3 {:value "asdf", :status true}}] (with-status (decode schema [:udr {:attr2 "hej1" :attr3 "asdf"}]))))
+    (is (=  [:udr {:language {:value "SV", :status true}, :attr2 {:value "hej1", :status false}, :attr3 :undefined}] (with-status (decode schema [:udr {:attr2 "hej1"}]))))
     ))
         
