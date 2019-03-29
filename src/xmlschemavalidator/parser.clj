@@ -32,10 +32,18 @@
     content
     (cons attrs content)))
 
+(def min-max-occurs-attrs {:maxOccurs "1", :minOccurs "1"})
+(def default-attrs {:sequence min-max-occurs-attrs
+                    :all min-max-occurs-attrs
+                    :choice min-max-occurs-attrs})
+(defn assoc-attrs [tag attrs]
+  (merge (default-attrs tag) attrs))
+
 (defn element->hiccup [node]
   (cond
-    (map? node) 
-    (cons (:tag node) (attrs-of (:attrs node) (element->hiccup (:content node))))
+    (map? node)
+    (let [tag (:tag node)]
+      (cons tag (attrs-of (assoc-attrs tag (:attrs node)) (element->hiccup (:content node)))))
     (coll? node)
     (map element->hiccup node)
     :else
@@ -70,15 +78,18 @@
                  ATTRIBUTE-NAME-TYPE = (OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET)
                  GROUP = OPEN-PAREN ':group' SPACE (NAME-ATTR SPACE GROUP-BODY) | REF-ATTR | GROUP-BODY CLOSE-PAREN
                  GROUP-BODY = [ANNOTATION] [SEQUENCE | ALL | CHOICE]
-                 ALL = OPEN-PAREN <':all'> SPACE ELEMENTS CLOSE-PAREN
-                 CHOICE = OPEN-PAREN <':choice'> SPACE ELEMENTS CLOSE-PAREN
-                 SEQUENCE = OPEN-PAREN <':sequence'> SPACE ELEMENTS CLOSE-PAREN
+                 ALL = OPEN-PAREN <':all'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
+                 CHOICE = OPEN-PAREN <':choice'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
+                 SEQUENCE = OPEN-PAREN <':sequence'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
+                 MAX-OCCURS-ATTR = ':maxOccurs' SPACE STRING
+                 MIN-OCCURS-ATTR = ':minOccurs' SPACE STRING
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
                  <SIMPLETYPES> = ((SIMPLETYPE OPTIONAL-SPACE)* | SIMPLETYPE)
                  SIMPLETYPE = (OPEN-PAREN <':simpleType'> SPACE (SIMPLETYPE-BODY | ((NAME-TYPE-ATTR | (NAME-ATTR SPACE SIMPLETYPE-BODY)))) CLOSE-PAREN)
                  REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
                  NAME-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
                  NAME-TYPE-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL CLOSE-BRACKET
+                 MIN-MAX-OCCURS-ATTRS = OPEN-BRACKET ':maxOccurs' SPACE STRING <','> SPACE ':minOccurs' SPACE STRING CLOSE-BRACKET OPTIONAL-SPACE
                  <SIMPLETYPE-BODY> = [ANNOTATION] (LIST | UNION | RESTRICTION)
                  LIST = OPEN-PAREN <':list'> SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
                  UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> OPTIONAL-SPACE MEMBERTYPES CLOSE-BRACKET] OPTIONAL-SPACE SIMPLETYPES CLOSE-PAREN
@@ -205,15 +216,27 @@
 
 (defn sequence-cond->clj [m value] `(= (keys ~m) (map :tag ~value)))
 
-(defn sequence->clj [m] (container->clj m sequence-cond->clj))
+(defmacro def-container [name]
+  `(defn ~(symbol (format "%s->clj" name)) 
+     ([m#] (container->clj m# sequence-cond->clj))
+     ([attrs# m#] (container->clj m# sequence-cond->clj))))
+
+(defn sequence->clj 
+  ([m] (container->clj m sequence-cond->clj))
+  ([attrs m] (container->clj m sequence-cond->clj)))
+  
 
 (defn all-cond->clj [m value] `(= (.keySet ~m) (set (map :tag ~value))))
 
-(defn all->clj [m] (container->clj m all-cond->clj))
+(defn all->clj 
+  ([m] (container->clj m all-cond->clj))
+  ([attrs m] (container->clj m all-cond->clj)))
 
 (defn choice-cond->clj [_ value] `(= (count ~value) 1))
 
-(defn choice->clj [m] (container->clj m choice-cond->clj))
+(defn choice->clj 
+  ([m] (container->clj m choice-cond->clj))
+  ([attrs m] (container->clj m choice-cond->clj)))
 
 
 
