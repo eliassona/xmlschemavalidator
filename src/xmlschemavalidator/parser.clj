@@ -218,26 +218,18 @@
 
 (defmacro def-container [name]
   `(defn ~(symbol (format "%s->clj" name)) 
-     ([m#] (container->clj m# sequence-cond->clj))
-     ([attrs# m#] (container->clj m# sequence-cond->clj))))
+     ([m#] (container->clj m# ~(symbol (format "%s-cond->clj" name))))
+     ([attrs# m#] (container->clj m# ~(symbol (format "%s-cond->clj" name))))))
 
-(defn sequence->clj 
-  ([m] (container->clj m sequence-cond->clj))
-  ([attrs m] (container->clj m sequence-cond->clj)))
-  
+(def-container sequence)
 
 (defn all-cond->clj [m value] `(= (.keySet ~m) (set (map :tag ~value))))
 
-(defn all->clj 
-  ([m] (container->clj m all-cond->clj))
-  ([attrs m] (container->clj m all-cond->clj)))
+(def-container all)
 
 (defn choice-cond->clj [_ value] `(= (count ~value) 1))
 
-(defn choice->clj 
-  ([m] (container->clj m choice-cond->clj))
-  ([attrs m] (container->clj m choice-cond->clj)))
-
+(def-container choice)
 
 
 (defn attr->clj [attrs]
