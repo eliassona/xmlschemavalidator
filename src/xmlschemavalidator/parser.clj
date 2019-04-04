@@ -35,7 +35,9 @@
 (def min-max-occurs-attrs {:maxOccurs "1", :minOccurs "1"})
 (def default-attrs {:sequence min-max-occurs-attrs
                     :all min-max-occurs-attrs
-                    :choice min-max-occurs-attrs})
+                    :choice min-max-occurs-attrs
+                    ;:element min-max-occurs-attrs
+                    })
 (defn assoc-attrs [tag attrs]
   (merge (default-attrs tag) attrs))
 
@@ -78,9 +80,9 @@
                  ATTRIBUTE-NAME-TYPE = (OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL [<','> SPACE (':default' | ':fixed' | ':use') SPACE SYMBOL] CLOSE-BRACKET)
                  GROUP = OPEN-PAREN ':group' SPACE (NAME-ATTR SPACE GROUP-BODY) | REF-ATTR | GROUP-BODY CLOSE-PAREN
                  GROUP-BODY = [ANNOTATION] [SEQUENCE | ALL | CHOICE]
-                 ALL = OPEN-PAREN <':all'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
-                 CHOICE = OPEN-PAREN <':choice'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
-                 SEQUENCE = OPEN-PAREN <':sequence'> SPACE [MIN-MAX-OCCURS-ATTRS] ELEMENTS CLOSE-PAREN
+                 ALL = OPEN-PAREN <':all'> SPACE MIN-MAX-OCCURS-ATTRS ELEMENTS CLOSE-PAREN
+                 CHOICE = OPEN-PAREN <':choice'> SPACE MIN-MAX-OCCURS-ATTRS ELEMENTS CLOSE-PAREN
+                 SEQUENCE = OPEN-PAREN <':sequence'> SPACE MIN-MAX-OCCURS-ATTRS ELEMENTS CLOSE-PAREN
                  MAX-OCCURS-ATTR = ':maxOccurs' SPACE STRING
                  MIN-OCCURS-ATTR = ':minOccurs' SPACE STRING
                  ELEMENTS = ((ELEMENT OPTIONAL-SPACE)* | ELEMENT)
@@ -89,7 +91,8 @@
                  REF-ATTR = OPEN-BRACKET ':ref' SPACE SYMBOL CLOSE-BRACKET
                  NAME-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL CLOSE-BRACKET
                  NAME-TYPE-ATTR = OPEN-BRACKET <':name'> SPACE SYMBOL <','> SPACE <':type'> SPACE SYMBOL CLOSE-BRACKET
-                 MIN-MAX-OCCURS-ATTRS = OPEN-BRACKET ':maxOccurs' SPACE STRING <','> SPACE ':minOccurs' SPACE STRING CLOSE-BRACKET OPTIONAL-SPACE
+                 MIN-MAX-OCCURS-ATTRS = OPEN-BRACKET MIN-MAX-OCCURS-ATTRS-BODY CLOSE-BRACKET OPTIONAL-SPACE
+                 MIN-MAX-OCCURS-ATTRS-BODY = ':maxOccurs' SPACE STRING <','> SPACE ':minOccurs' SPACE STRING
                  <SIMPLETYPE-BODY> = [ANNOTATION] (LIST | UNION | RESTRICTION)
                  LIST = OPEN-PAREN <':list'> SPACE OPEN-BRACKET ':itemType' SPACE SYMBOL CLOSE-BRACKET CLOSE-PAREN
                  UNION = OPEN-PAREN <':union'> SPACE [OPEN-BRACKET <':memberTypes'> OPTIONAL-SPACE MEMBERTYPES CLOSE-BRACKET] OPTIONAL-SPACE SIMPLETYPES CLOSE-PAREN
@@ -317,7 +320,8 @@
    :COMPLEXTYPE complex-type->clj
    :ATTRIBUTES (fn [& args] (apply merge args))
    :REF-ATTR (fn [_ name] [:ref name])
-   :MIN-MAX-OCCURS-ATTRS (fn [& args] (apply hash-map args))
+   :MIN-MAX-OCCURS-ATTRS identity
+   :MIN-MAX-OCCURS-ATTRS-BODY (fn [& args] (apply hash-map args))
    }
   )
 
