@@ -307,13 +307,26 @@
           "<sequence>
 		         <element name=\"seq1\" type=\"integer\"/>
 		         <element name=\"seq2\" type=\"string\"/>
-		       </sequence>" :SEQUENCE)]
-    (is (= [true [true 1 :seq1] [true "adsf" :seq2]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>adsf</seq2></udr>")) predef-types {} {})))
-    (is (= [false [false 2 :seq2] [false "asdf" :seq1]] (f (:content (parse-str "<udr><seq2>2</seq2><seq1>asdf</seq1></udr>")) predef-types {} {})))
-    (is (= [false [true 1 :seq1]] (f (:content (parse-str "<udr><seq1>1</seq1></udr>")) predef-types {} {})))
-    (is (= [false [true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq2>2</seq2><seq3>2</seq3></udr>")) predef-types {} {})))
-    (is (= [false [true 1 :seq1] [false :undefined :seq3]] (f (:content (parse-str "<udr><seq1>1</seq1><seq3>1</seq3></udr>")) predef-types {} {})))
+		       </sequence>" :SEQUENCE)]                               
+    (is (= [true [true 1 :seq1] [true "adsf" :seq2]] (f (:content (sexp-as-element [:udr [:seq1 1] [:seq2 "adsf"]])) predef-types {} {})))
+    (is (= [false [false 2 :seq2] [false "asdf" :seq1]] (f (:content (sexp-as-element [:udr [:seq2 2] [:seq1 "asdf"]])) predef-types {} {})))
+    (is (= [false [true 1 :seq1]] (f (:content (sexp-as-element [:udr [:seq1 1]])) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false 2 :seq2] [false :undefined :seq3]] (f (:content (sexp-as-element [:udr [:seq1 1] [:seq2 2] [:seq3 3]])) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [false :undefined :seq3]] (f (:content (sexp-as-element [:udr [:seq1 1] [:seq3 3]])) predef-types {} {})))
+    (is (= [false [true 1 :seq1] [true 2 :seq1]] (f (:content (sexp-as-element [:udr [:seq1 1] [:seq1 2]])) predef-types {} {})))
     ))
+
+(deftest test-sequence-with-min-max-occurs 
+  (let [f (validation-fn-of
+            [:sequence {:maxOccurs 3 :minOccurs 0}
+             [:element {:name "f1" :type "byte"}]] :SEQUENCE)]                               
+    (is (= [true [true 1 :f1]] (f (:content (sexp-as-element [:udr [:f1 1]])) predef-types {} {})))
+;    (is (= [true [true 1 :f1][true 2 :f1]] (f (:content (sexp-as-element [:udr [:f1 1][:f1 2]])) predef-types {} {})))
+;    (is (= [true [true 1 :f1][true 2 :f1][true 3 :f1]] (f (:content (sexp-as-element [:udr [:f1 1][:f1 2][:f1 3]])) predef-types {} {})))
+    (is (= [false [true 1 :f1][true 2 :f1][true 3 :f1][true 4 :f1]] (f (:content (sexp-as-element [:udr [:f1 1][:f1 2][:f1 3][:f1 4]])) predef-types {} {})))
+    
+    ))
+
 
 (deftest test-all 
   (let [f (validation-fn-of 

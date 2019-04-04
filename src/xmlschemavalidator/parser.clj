@@ -202,7 +202,7 @@
   
 (defn elements->clj [& args] (apply merge args))
 
-(defn container->clj [m cond-fn]
+(defn container->clj [attrs m cond-fn]
   (fn-of 
      `(let [~'elements (merge ~m ~'elements)] 
           (conj 
@@ -218,8 +218,7 @@
 
 (defmacro def-container [name]
   `(defn ~(symbol (format "%s->clj" name)) 
-     ([m#] (container->clj m# ~(symbol (format "%s-cond->clj" name))))
-     ([attrs# m#] (container->clj m# ~(symbol (format "%s-cond->clj" name))))))
+     ([attrs# m#] (container->clj attrs# m# ~(symbol (format "%s-cond->clj" name))))))
 
 (def-container sequence)
 
@@ -318,6 +317,7 @@
    :COMPLEXTYPE complex-type->clj
    :ATTRIBUTES (fn [& args] (apply merge args))
    :REF-ATTR (fn [_ name] [:ref name])
+   :MIN-MAX-OCCURS-ATTRS (fn [& args] (apply hash-map args))
    }
   )
 
